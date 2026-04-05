@@ -1,2 +1,0 @@
---- ls-remote ---
-6b25fc4497b1516735180fd538d4eb1cd35f2a8f	refs/heads/main
