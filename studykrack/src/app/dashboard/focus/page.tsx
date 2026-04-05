@@ -1,62 +1,37 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw, AlertCircle } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/providers/AuthProvider';
-
-type Task = {
-  id: string;
-  title: string;
-  category?: string;
-};
+import { useState, useEffect, useRef } from 'react';
+import { toast } from 'react-hot-toast';
 
 export default function FocusPage() {
-  const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutes
+  const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
-  const [suggestedTasks, setSuggestedTasks] = useState<Task[]>([]);
-  const { user } = useAuth();
-  
+  const [sessionCount, setSessionCount] = useState(0);
+  const [soundscape, setSoundscape] = useState('Silent');
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    
     if (isActive && timeLeft > 0) {
-      interval = setInterval(() => {
+      timerRef.current = setInterval(() => {
         setTimeLeft((prev) => prev - 1);
       }, 1000);
-    } else if (isActive && timeLeft === 0) {
+    } else if (timeLeft === 0) {
       setIsActive(false);
-      handleSessionComplete();
+      setSessionCount(prev => prev + 1);
+      toast.success('Cognitive reset complete.');
+      if (timerRef.current) clearInterval(timerRef.current);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
     }
-    
     return () => {
-      if (interval) clearInterval(interval);
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [isActive, timeLeft]);
-
-  const handleSessionComplete = async () => {
-    toast.success('Focus session complete! Great job!');
-    
-    if (user) {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('id, title, category')
-        .eq('user_id', user.uid)
-        .eq('completed', false)
-        .limit(3);
-        
-      if (!error && data) {
-        setSuggestedTasks(data);
-      }
-    }
-  };
 
   const toggleTimer = () => setIsActive(!isActive);
   const resetTimer = () => {
     setIsActive(false);
     setTimeLeft(25 * 60);
-    setSuggestedTasks([]);
   };
 
   const formatTime = (seconds: number) => {
@@ -65,71 +40,81 @@ export default function FocusPage() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const progress = ((25 * 60 - timeLeft) / (25 * 60)) * 100;
+
   return (
-    <div className="max-w-2xl mx-auto flex flex-col items-center justify-center min-h-[80vh]">
-      <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-12 w-full text-center relative overflow-hidden">
-        {/* Background visual flair */}
-        <div className="absolute -top-32 -left-32 w-64 h-64 bg-indigo-50 rounded-full blur-3xl opacity-60"></div>
-        <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-emerald-50 rounded-full blur-3xl opacity-60"></div>
-        
-        <h1 className="text-3xl font-bold text-slate-800 mb-2 relative z-10">Focus Mode</h1>
-        <p className="text-slate-500 mb-12 relative z-10">Stay productive with the Pomodoro technique</p>
-        
-        <div className="text-8xl font-black text-indigo-600 mb-12 tabular-nums tracking-tight relative z-10">
-          {formatTime(timeLeft)}
-        </div>
-        
-        <div className="flex items-center justify-center gap-6 relative z-10">
-          <button 
-            onClick={toggleTimer}
-            className={`flex items-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg transition-all shadow-md hover:shadow-lg transform hover:-translate-y-1 ${
-              isActive 
-                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' 
-                : 'bg-indigo-600 text-white hover:bg-indigo-700'
-            }`}
-          >
-            {isActive ? (
-              <>
-                <Pause className="w-6 h-6" /> Pause
-              </>
-            ) : (
-              <>
-                <Play className="w-6 h-6 fill-current" /> Start Focus
-              </>
-            )}
-          </button>
-          
-          <button 
-            onClick={resetTimer}
-            className="p-4 rounded-2xl bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 transition"
-            title="Reset Timer"
-          >
-            <RotateCcw className="w-6 h-6" />
-          </button>
-        </div>
+    <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-16 animate-fade-in text-on-surface">
+      <header className="text-center space-y-4">
+        <h1 className="text-6xl font-headline font-black tracking-tighter uppercase text-on-surface">Cognitive <span className="text-primary">Sanctum</span></h1>
+        <p className="text-on-surface-variant font-medium tracking-widest uppercase text-xs">Isolate. Synthesize. Transcend.</p>
+      </header>
+
+      {/* Visual Timer Stage */}
+      <div className="relative group cursor-pointer" onClick={toggleTimer}>
+         {/* Outer Glow */}
+         <div className={`absolute inset-0 bg-primary/20 blur-[100px] rounded-full transition-opacity duration-1000 ${isActive ? 'opacity-100 animate-pulse' : 'opacity-0'}`}></div>
+         
+         <div className="relative w-80 h-80 rounded-full glass-panel border-white/5 flex items-center justify-center transition-transform hover:scale-105 duration-500 shadow-[0_0_100px_rgba(41,56,152,0.1)]">
+            <svg className="absolute inset-0 w-full h-full -rotate-90">
+               <circle className="text-surface-container-highest/20" cx="160" cy="160" r="140" fill="transparent" stroke="currentColor" strokeWidth="4"></circle>
+               <circle className="text-primary transition-all duration-1000" cx="160" cy="160" r="140" fill="transparent" stroke="currentColor" strokeDasharray="879.6" strokeDashoffset={879.6 - (879.6 * (progress/100))} strokeWidth="4" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 8px #293898)' }}></circle>
+            </svg>
+            <div className="text-center">
+               <div className="text-7xl font-headline font-black text-white tracking-tight">{formatTime(timeLeft)}</div>
+               <div className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.4em] mt-2">{isActive ? 'Flowing' : 'Stagnant'}</div>
+            </div>
+         </div>
       </div>
-      
-      {/* Suggestions Section */}
-      {suggestedTasks.length > 0 && (
-        <div className="mt-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertCircle className="w-5 h-5 text-indigo-600" />
-            <h3 className="text-lg font-bold text-slate-700">Up Next: Incomplete Tasks</h3>
-          </div>
-          <div className="grid gap-3">
-            {suggestedTasks.map((task) => (
-              <div key={task.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between hover:border-indigo-200 transition">
-                <span className="font-medium text-slate-700">{task.title}</span>
-                {task.category && (
-                  <span className="text-xs font-semibold px-2 py-1 bg-slate-100 text-slate-500 rounded-md">
-                    {task.category}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+
+      {/* Depth Controls */}
+      <div className="flex gap-8 items-center">
+         <button 
+           onClick={resetTimer}
+           className="w-16 h-16 rounded-full glass-panel border-white/5 flex items-center justify-center text-outline hover:text-white transition-all hover:bg-white/5"
+         >
+           <span className="material-symbols-outlined text-2xl">refresh</span>
+         </button>
+         <button 
+           onClick={toggleTimer}
+           className={`w-28 h-28 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-90 ${
+             isActive ? 'bg-red-500 translate-y-1' : 'bg-primary hover:scale-110 shadow-primary/30'
+           }`}
+         >
+           <span className="material-symbols-outlined text-4xl text-white">
+             {isActive ? 'pause' : 'play_arrow'}
+           </span>
+         </button>
+         <button className="w-16 h-16 rounded-full glass-panel border-white/5 flex items-center justify-center text-outline hover:text-white transition-all hover:bg-white/5">
+           <span className="material-symbols-outlined text-2xl">more_horiz</span>
+         </button>
+      </div>
+
+      {/* Soundscape Selection */}
+      <section className="flex gap-4">
+         {['Silent', 'Rain', 'Binaural', 'Lo-Fi'].map((s) => (
+           <button 
+             key={s}
+             onClick={() => setSoundscape(s)}
+             className={`px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
+               soundscape === s ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-surface-container-highest/20 text-slate-500 hover:text-white'
+             }`}
+           >
+             {s}
+           </button>
+         ))}
+      </section>
+
+      {/* Flow Stats Summary */}
+      <section className="grid grid-cols-2 gap-12 w-full max-w-xl pt-12 border-t border-white/5">
+         <div className="text-center">
+           <div className="text-3xl font-headline font-black text-white">{sessionCount}</div>
+           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Sessions Today</div>
+         </div>
+         <div className="text-center">
+           <div className="text-3xl font-headline font-black text-white">124</div>
+           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Focus Minutes</div>
+         </div>
+      </section>
     </div>
   );
 }
