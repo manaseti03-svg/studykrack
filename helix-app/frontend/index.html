@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HELIX - Smart Medical Assistant</title>
+    <meta name="description" content="AI patient symptom checker and medical report analyzer.">
+    <!-- Google Fonts for Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Highlight.js for markdown-like processing (Using marked.js instead for markdown parsing) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dynamic-background">
+        <div class="glow-blob blob-1"></div>
+        <div class="glow-blob blob-2"></div>
+        <div class="glow-blob blob-3"></div>
+    </div>
+
+    <header class="glass-nav">
+        <div class="logo">
+            <i class="fa-solid fa-dna logo-icon"></i>
+            <h1>HELIX</h1>
+        </div>
+        <div class="controls">
+            <div class="lang-selector">
+                <i class="fa-solid fa-globe"></i>
+                <select id="language" title="Select Language">
+                    <option value="English">English</option>
+                    <option value="Spanish">Spanish</option>
+                    <option value="French">French</option>
+                    <option value="Hindi">Hindi</option>
+                    <option value="Mandarin">Mandarin</option>
+                </select>
+            </div>
+            <a href="https://github.com" target="_blank" class="github-btn" title="View Source"><i class="fa-brands fa-github"></i></a>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="hero-section">
+            <h2>Your AI-Powered <br><span class="gradient-text">Medical Assistant</span></h2>
+            <p>Analyze your symptoms instantly or upload medical reports for simple, jargon-free explanations.</p>
+        </div>
+
+        <div class="glass-panel main-panel">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="symptoms">
+                    <i class="fa-solid fa-stethoscope"></i> Symptom Checker
+                </button>
+                <button class="tab-btn" data-tab="reports">
+                    <i class="fa-solid fa-file-medical"></i> Report Analyzer
+                </button>
+            </div>
+
+            <div class="tab-contents">
+                <!-- Symptom Checker Tab -->
+                <div class="tab-pane active" id="symptoms-tab">
+                    <div class="input-group">
+                        <label for="symptom-input">Describe your symptoms</label>
+                        <textarea id="symptom-input" placeholder="E.g., I have had a headache for 2 days, accompanied by slight fever and a sore throat..."></textarea>
+                    </div>
+                    <button class="action-btn" id="check-symptoms-btn">
+                        <span>Analyze Symptoms</span>
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </button>
+                </div>
+
+                <!-- Report Analyzer Tab -->
+                <div class="tab-pane" id="reports-tab">
+                    <div class="file-upload-zone" id="drop-zone">
+                        <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" hidden>
+                        <div class="upload-content">
+                            <i class="fa-solid fa-cloud-arrow-up cloud-icon"></i>
+                            <p class="primary-text">Drag & drop your report here</p>
+                            <p class="secondary-text">or <span class="highlight">browse files</span></p>
+                            <p class="restrictions">Supports PDF, JPG, PNG (Max 5MB)</p>
+                        </div>
+                        <div id="file-preview" class="hidden">
+                            <i class="fa-solid fa-file-pdf file-icon"></i>
+                            <span id="file-name">filename.pdf</span>
+                            <button id="remove-file"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    </div>
+                    <button class="action-btn" id="analyze-report-btn" disabled>
+                        <span>Explain Report</span>
+                        <i class="fa-solid fa-microscope"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Output Area -->
+        <div class="glass-panel output-panel hidden" id="output-panel">
+            <div class="output-header">
+                <h3><i class="fa-solid fa-heart-pulse"></i> Assistant Analysis</h3>
+                <button id="close-output"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="loading" class="hidden">
+                <div class="spinner"></div>
+                <p>HELIX is processing your request...</p>
+            </div>
+            <div id="result-content" class="markdown-body">
+                <!-- LLM Output goes here -->
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Built for the 24-Hour Hackathon | HELIX App</p>
+        <p class="disclaimer">⚠️ HELIX is an AI tool and not a substitute for professional medical advice.</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
