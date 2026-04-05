@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { auth } from '@/lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -9,36 +10,38 @@ export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [msg, setMsg] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
-      setMsg('Success! You can now log in.');
-    } catch (err: any) {
-      if (err.message === 'Failed to fetch') {
-        setError('Database keys not found! But for demo purposes, you can jump straight to Login.');
-      } else {
-        setError(err.message || 'An error occurred');
-      }
+      await createUserWithEmailAndPassword(auth, email, password);
+      router.push('/dashboard');
+    } catch (err: unknown) {
+      if (err instanceof Error) setError(err.message.replace('Firebase: ', ''));
+      else setError('Signup failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
       <div className="max-w-sm w-full bg-white p-8 rounded-xl shadow-sm border border-slate-100">
-        <h2 className="text-2xl font-bold mb-6 text-center text-slate-800">Create Account</h2>
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-indigo-600">studyKrack</h1>
+          <p className="text-slate-500 text-sm mt-1">Create your account and start studying smarter.</p>
+        </div>
         {error && <div className="p-3 mb-4 bg-red-50 text-red-600 rounded-lg text-sm">{error}</div>}
-        {msg && <div className="p-3 mb-4 bg-green-50 text-green-600 rounded-lg text-sm">{msg}</div>}
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-            <input 
-              type="email" 
-              required 
+            <input
+              type="email"
+              required
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -46,20 +49,26 @@ export default function Signup() {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-            <input 
-              type="password" 
-              required 
+            <input
+              type="password"
+              required
+              minLength={6}
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <button type="submit" className="w-full py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
-            Sign Up
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-60"
+          >
+            {loading ? 'Creating account...' : 'Sign Up'}
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-slate-500">
-          Already have an account? <Link href="/login" className="text-indigo-600 hover:underline">Log in</Link>
+          Already have an account?{' '}
+          <Link href="/login" className="text-indigo-600 hover:underline">Log in</Link>
         </p>
       </div>
     </div>
