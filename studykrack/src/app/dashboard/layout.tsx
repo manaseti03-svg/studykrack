@@ -6,7 +6,8 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
-import { LayoutDashboard, CheckSquare, GraduationCap, LogOut } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, GraduationCap, Timer, LogOut } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -36,10 +37,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare },
     { name: 'Academics', href: '/dashboard/academics', icon: GraduationCap },
+    { name: 'Focus Mode', href: '/dashboard/focus', icon: Timer },
   ];
 
   return (
     <div className="flex h-screen bg-slate-50">
+      <Toaster position="top-right" />
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
         <div className="p-6 border-b border-slate-100">

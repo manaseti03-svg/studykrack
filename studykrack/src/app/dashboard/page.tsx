@@ -13,6 +13,7 @@ type GradePoint = {
   percentage: number;
   score: number;
   total: number;
+  date?: string;
 };
 
 export default function DashboardPage() {
@@ -43,12 +44,16 @@ export default function DashboardPage() {
       setAvgScore(totalMax > 0 ? ((totalScore / totalMax) * 100).toFixed(1) + '%' : '—');
 
       setGradeData(
-        grades.map(g => ({
-          subject: g.subject,
-          percentage: g.total > 0 ? (g.score / g.total) * 100 : 0,
-          score: g.score,
-          total: g.total,
-        }))
+        grades.map(g => {
+          const dateStr = g.created_at ? new Date(g.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+          return {
+            subject: g.subject,
+            percentage: g.total > 0 ? (g.score / g.total) * 100 : 0,
+            score: g.score,
+            total: g.total,
+            date: dateStr,
+          };
+        })
       );
     }
 

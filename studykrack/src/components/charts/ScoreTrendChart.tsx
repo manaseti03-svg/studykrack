@@ -17,6 +17,7 @@ type GradePoint = {
   percentage: number;
   score: number;
   total: number;
+  date?: string;
 };
 
 type ScoreTrendChartProps = {
@@ -28,7 +29,8 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
     const item = payload[0].payload;
     return (
       <div className="bg-white px-4 py-3 rounded-lg shadow-lg border border-slate-100">
-        <p className="font-semibold text-slate-800 text-sm">{label}</p>
+        <p className="font-semibold text-slate-800 text-sm">{item.subject}</p>
+        <p className="text-slate-500 text-xs mb-1">{item.date}</p>
         <p className="text-indigo-600 text-sm font-medium">{item.percentage.toFixed(1)}%</p>
         <p className="text-slate-400 text-xs">{item.score} / {item.total} pts</p>
       </div>
@@ -57,7 +59,7 @@ export default function ScoreTrendChart({ data }: ScoreTrendChartProps) {
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
         <XAxis
-          dataKey="subject"
+          dataKey="date"
           tick={{ fill: '#94a3b8', fontSize: 12 }}
           axisLine={{ stroke: '#e2e8f0' }}
           tickLine={false}
