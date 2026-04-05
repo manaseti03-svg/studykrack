@@ -1,0 +1,26 @@
+--- CynoSure_2k26 git log ---
+6b25fc4 feat: Transition to studyKrack Next.js MVP
+0f6b3d8 Update: Refined UI components and integrated project logic
+--- studykrack git log ---
+6b25fc4 feat: Transition to studyKrack Next.js MVP
+0f6b3d8 Update: Refined UI components and integrated project logic
+--- push dry run studykrack ---
+git : Everything 
+up-to-date
+At line:1 char:476
++ ... heck2.txt ; git -C c
+:\Users\manas\OneDrive\Des
+ktop\CynoSure_2k26\stud 
+...
++                 ~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (E  
+  verything up-to-date:   
+ String) [], RemoteExc    
+eption
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 

@@ -14,9 +14,17 @@ export default function Signup() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) setError(error.message);
-    else setMsg('Success! You can now log in.');
+    try {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+      setMsg('Success! You can now log in.');
+    } catch (err: any) {
+      if (err.message === 'Failed to fetch') {
+        setError('Database keys not found! But for demo purposes, you can jump straight to Login.');
+      } else {
+        setError(err.message || 'An error occurred');
+      }
+    }
   };
 
   return (
