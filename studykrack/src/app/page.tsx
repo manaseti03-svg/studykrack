@@ -94,6 +94,97 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Evolutionary Comparison Section */}
+      <section className="py-40 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-8 relative z-10">
+          <div className="text-center mb-32 space-y-6">
+             <h2 className="text-6xl font-headline font-black text-white tracking-tighter uppercase italic drop-shadow-[0_0_20px_#44d8f140]">The Evolutionary Leap</h2>
+             <div className="flex items-center justify-center gap-4">
+                <div className="h-0.5 w-12 bg-secondary/50"></div>
+                <p className="text-secondary font-bold text-xs uppercase tracking-[0.5em] opacity-80">Beyond Legacy Architecture</p>
+                <div className="h-0.5 w-12 bg-secondary/50"></div>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-stretch">
+            {/* Standard Apps Column */}
+            <div className="lg:col-span-5">
+              <GlassPanel className="p-16 h-full border-white/5 opacity-40 grayscale blur-[1px] hover:grayscale-0 hover:blur-none hover:opacity-60 transition-all duration-1000 bg-white/5" hoverable={false} animate={false}>
+                <div className="flex items-center justify-between mb-16 border-b border-white/5 pb-6 text-slate-500">
+                  <h3 className="text-xl font-headline font-bold uppercase tracking-widest">Standard Legacy</h3>
+                  <Icon name="block" className="text-2xl" />
+                </div>
+                <div className="space-y-20">
+                    {[
+                      { f: 'Doubts', d: 'Google Search (Slow)', i: 'search_off' },
+                      { f: 'Focus', d: 'Manual Timer', i: 'timer_off' },
+                      { f: 'Persistence', d: 'Local Storage (Lost)', i: 'sd_card_alert' }
+                    ].map(item => (
+                      <div key={item.f} className="flex items-center gap-10">
+                        <Icon name={item.i} className="text-4xl text-slate-800" />
+                        <div>
+                          <div className="text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-2">{item.f}</div>
+                          <div className="text-xl font-headline font-medium text-slate-600 leading-tight">{item.d}</div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </GlassPanel>
+            </div>
+
+            {/* Middle Divider Icon */}
+            <div className="hidden lg:flex lg:col-span-1 items-center justify-center">
+               <div className="w-12 h-12 rounded-full border border-secondary/30 flex items-center justify-center text-secondary shadow-[0_0_20px_#44d8f130]">
+                  <Icon name="arrow_forward" className="text-2xl" />
+               </div>
+            </div>
+
+            {/* Scholaris / studyKrack Column */}
+            <div className="lg:col-span-6 relative">
+              <div className="absolute -inset-4 bg-secondary/10 blur-3xl rounded-[3rem] animate-pulse-slow" />
+              <GlassPanel className="p-16 h-full border-secondary/40 bg-secondary/5 relative overflow-hidden backdrop-blur-2xl" hoverable={false} animate={true}>
+                <div className="flex items-center justify-between mb-16 border-b border-secondary/20 pb-6">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-2xl font-headline font-black text-white uppercase tracking-tighter italic">
+                      <span className="text-secondary">Scholaris</span> 2.0
+                    </h3>
+                    <div className="w-2.5 h-2.5 rounded-full bg-secondary animate-ping shadow-[0_0_15px_#44d8f1]" />
+                  </div>
+                  <Icon name="verified" className="text-3xl text-secondary animate-bounce-slow" />
+                </div>
+
+                <div className="space-y-20">
+                    {[
+                      { f: 'Neural Intelligence', d: 'Instant AI Tutor (Context-aware)', i: 'psychology', c: 'text-secondary' },
+                      { f: 'Cognitive Sanctum', d: 'Fullscreen Shield + Silent Notifications', i: 'shield', c: 'text-amber-400' },
+                      { f: 'Quantum Persistence', d: 'Supabase Cloud + Firebase Security', i: 'cloud_done', c: 'text-secondary' }
+                    ].map(item => (
+                      <div key={item.f} className="flex items-center gap-10 relative z-10 group/item">
+                        <div className={`w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-[0_0_30px_rgba(68,216,241,0.1)] group-hover/item:border-secondary transition-all duration-500`}>
+                          <Icon name={item.i} className={`text-4xl ${item.c}`} />
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-bold text-secondary uppercase tracking-[0.4em] mb-2 drop-shadow-[0_0_10px_rgba(68,216,241,0.4)]">{item.f}</div>
+                          <div className="text-2xl font-headline font-black text-white italic tracking-tighter leading-tight drop-shadow-lg">{item.d}</div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+
+                <div className="mt-24 relative z-10">
+                  <ScholarisButton href="/login" variant="primary" className="!w-full !h-24 !text-base !font-black !italic !uppercase !tracking-[0.3em] !rounded-3xl shadow-[0_0_50px_rgba(68,216,241,0.2)] hover:shadow-[0_0_60px_rgba(68,216,241,0.4)] transition-all">
+                    Initiate Ascension
+                  </ScholarisButton>
+                </div>
+              </GlassPanel>
+            </div>
+          </div>
+        </div>
+        
+        {/* Deep background mesh behind comparison */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-radial from-secondary/10 via-transparent to-transparent opacity-30 select-none pointer-events-none" />
+      </section>
+
       {/* CTA Section (Refactored) */}
       <section className="py-40 px-6 relative z-10">
         <GlassPanel className="max-w-4xl mx-auto text-center p-20">
