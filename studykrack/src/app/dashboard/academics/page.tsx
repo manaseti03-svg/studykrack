@@ -9,17 +9,11 @@ import ScholarisButton from '@/components/ui/ScholarisButton';
 import Icon from '@/components/ui/Icon';
 import StatsTracker from '@/components/dashboard/StatsTracker';
 
-type GradeRecord = {
-  id: string;
-  subject: string;
-  score: number;
-  total: number;
-  created_at: string;
-};
+import StudyService, { AcademicRecord } from '@/services/studyService';
 
 export default function AcademicsPage() {
   const { user } = useAuth();
-  const [records, setRecords] = useState<GradeRecord[]>([]);
+  const [records, setRecords] = useState<AcademicRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [subject, setSubject] = useState('');
   const [score, setScore] = useState('');
@@ -27,15 +21,14 @@ export default function AcademicsPage() {
 
   const fetchRecords = useCallback(async () => {
     if (!user) return;
-    const { data, error } = await supabase
-      .from('grade_records')
-      .select('*')
-      .eq('user_id', user.uid)
-      .order('created_at', { ascending: false });
-
-    if (error) toast.error('Ledger access denied.');
-    else setRecords(data || []);
-    setLoading(false);
+    try {
+      const data = await StudyService.fetchGrades(user.uid);
+      setRecords(data);
+    } catch (err) {
+      toast.error('Ledger access denied.');
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -46,32 +39,33 @@ export default function AcademicsPage() {
     e.preventDefault();
     if (!subject || !score || !total || !user) return;
 
-    const { data, error } = await supabase
-      .from('grade_records')
-      .insert([{
+    try {
+      await StudyService.addGrade({
+        user_id: user.uid,
         subject,
         score: Number(score),
         total: Number(total),
-        user_id: user.uid
-      }])
-      .select();
-
-    if (error) toast.error('Audit failed.');
-    else {
-      setRecords([data[0], ...records]);
+        weight: 1,
+        date: new Date().toISOString()
+      });
       setSubject('');
       setScore('');
       setTotal('');
+      fetchRecords();
       toast.success('Result authenticated.');
+    } catch (err) {
+      toast.error('Audit failed.');
     }
   };
 
-  const deleteRecord = async (id: string) => {
-    const { error } = await supabase.from('grade_records').delete().eq('id', id);
-    if (error) toast.error('De-serialization failed.');
-    else {
+  const deleteGrade = async (id: string) => {
+    try {
+      const { error } = await supabase.from('grade_records').delete().eq('id', id);
+      if (error) throw error;
       setRecords(records.filter(r => r.id !== id));
       toast.success('Record redacted.');
+    } catch (err) {
+      toast.error('De-serialization failed.');
     }
   };
 
@@ -176,7 +170,7 @@ export default function AcademicsPage() {
                 </div>
                 <div>
                   <h4 className="text-2xl font-headline font-bold text-white uppercase italic">{record.subject}</h4>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest opacity-60">{new Date(record.created_at).toLocaleDateString()}</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest opacity-60">{new Date(record.date).toLocaleDateString()}</p>
                 </div>
               </div>
 
@@ -186,7 +180,7 @@ export default function AcademicsPage() {
                   <div className="text-2xl font-headline font-black text-white">{record.score} <span className="text-slate-600 text-lg">/</span> {record.total}</div>
                 </div>
                 <ScholarisButton 
-                  onClick={() => deleteRecord(record.id)}
+                  onClick={() => record.id && deleteGrade(record.id)}
                   variant="error"
                   className="w-12 h-12 !p-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"
                 >

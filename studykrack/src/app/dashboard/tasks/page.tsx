@@ -8,32 +8,25 @@ import GlassPanel from '@/components/ui/GlassPanel';
 import ScholarisButton from '@/components/ui/ScholarisButton';
 import Icon from '@/components/ui/Icon';
 
-type Task = {
-  id: string;
-  title: string;
-  category: string;
-  completed: boolean;
-  created_at: string;
-};
+import StudyService, { TaskNode } from '@/services/studyService';
 
 export default function TasksPage() {
   const { user } = useAuth();
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<TaskNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTask, setNewTask] = useState('');
   const [category, setCategory] = useState('Research');
 
   const fetchTasks = useCallback(async () => {
     if (!user) return;
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('user_id', user.uid)
-      .order('created_at', { ascending: false });
-
-    if (error) toast.error('Archive synchronization failed.');
-    else setTasks(data || []);
-    setLoading(false);
+    try {
+      const data = await StudyService.fetchTasks(user.uid);
+      setTasks(data);
+    } catch (err) {
+      toast.error('Archive synchronization failed.');
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -44,43 +37,41 @@ export default function TasksPage() {
     e.preventDefault();
     if (!newTask || !user) return;
 
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert([{ 
-        title: newTask, 
-        category, 
+    try {
+      await StudyService.upsertTask({
         user_id: user.uid,
-        completed: false 
-      }])
-      .select();
-
-    if (error) toast.error('Archival failed.');
-    else {
-      setTasks([data[0], ...tasks]);
+        title: newTask,
+        category,
+        completed: false
+      });
       setNewTask('');
+      fetchTasks();
       toast.success('Unit Logged.');
+    } catch (err) {
+      toast.error('Archival failed.');
     }
   };
 
-  const toggleTask = async (id: string, completed: boolean) => {
-    const { error } = await supabase
-      .from('tasks')
-      .update({ completed: !completed })
-      .eq('id', id);
-
-    if (error) toast.error('Status override failed.');
-    else {
-      setTasks(tasks.map(t => t.id === id ? { ...t, completed: !completed } : t));
-      toast.success(!completed ? 'Refinement Verified.' : 'Status Reset.');
+  const toggleTask = async (task: TaskNode) => {
+    try {
+      await StudyService.upsertTask({
+        ...task,
+        completed: !task.completed
+      });
+      fetchTasks();
+      toast.success(!task.completed ? 'Refinement Verified.' : 'Status Reset.');
+    } catch (err) {
+      toast.error('Status override failed.');
     }
   };
 
   const deleteTask = async (id: string) => {
-    const { error } = await supabase.from('tasks').delete().eq('id', id);
-    if (error) toast.error('De-serialization failed.');
-    else {
-      setTasks(tasks.filter(t => t.id !== id));
+    try {
+      await StudyService.deleteTask(id);
+      fetchTasks();
       toast.success('Unit Redacted.');
+    } catch (err) {
+      toast.error('De-serialization failed.');
     }
   };
 
@@ -142,7 +133,7 @@ export default function TasksPage() {
             <GlassPanel key={task.id} className="flex flex-col md:flex-row items-center justify-between gap-8 p-8 group border-white/5">
               <div className="flex items-center gap-8 w-full md:w-auto">
                 <div 
-                  onClick={() => toggleTask(task.id, task.completed)}
+                  onClick={() => toggleTask(task)}
                   className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
                     task.completed 
                       ? 'bg-secondary/20 shadow-inner' 
@@ -161,14 +152,14 @@ export default function TasksPage() {
                   <div className="flex items-center gap-4">
                      <span className="text-[10px] font-bold text-secondary uppercase tracking-[0.2em]">{task.category}</span>
                      <span className="h-1 w-1 rounded-full bg-slate-700"></span>
-                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{new Date(task.created_at).toLocaleDateString()}</span>
+                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{task.created_at ? new Date(task.created_at).toLocaleDateString() : 'N/A'}</span>
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-6 w-full md:w-auto justify-end">
                 <ScholarisButton 
-                  onClick={() => deleteTask(task.id)}
+                  onClick={() => task.id && deleteTask(task.id)}
                   variant="error"
                   className="w-12 h-12 !p-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"
                 >

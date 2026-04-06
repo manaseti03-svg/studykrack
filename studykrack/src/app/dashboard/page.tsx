@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import StudyService from '@/services/studyService';
 import { useAuth } from '@/providers/AuthProvider';
 import BentoCard from '@/components/dashboard/BentoCard';
 import StatsTracker from '@/components/dashboard/StatsTracker';
@@ -14,17 +14,26 @@ export default function DashboardPage() {
   const [taskStats, setTaskStats] = useState({ total: 0, completed: 0 });
   const [academicGpa, setAcademicGpa] = useState('0.00');
   const [loading, setLoading] = useState(true);
+  const [heatmapData, setHeatmapData] = useState<number[]>([]);
+
+  useEffect(() => {
+    // Generate mock data only on client after mount
+    const data = Array.from({ length: 28 }, () => 
+      Math.random() > 0.4 ? (Math.random() * 100) : 0
+    );
+    setHeatmapData(data);
+  }, []);
 
   const fetchStats = useCallback(async () => {
     if (!user) return;
     try {
-      const [{ data: tasks }, { data: grades }] = await Promise.all([
-        supabase.from('tasks').select('completed').eq('user_id', user.uid),
-        supabase.from('grade_records').select('score, total').eq('user_id', user.uid),
+      const [tasks, grades] = await Promise.all([
+        StudyService.fetchTasks(user.uid),
+        StudyService.fetchGrades(user.uid),
       ]);
 
-      const tCount = tasks?.length || 0;
-      const tComp = tasks?.filter(t => t.completed).length || 0;
+      const tCount = tasks.length;
+      const tComp = tasks.filter(t => t.completed).length;
       setTaskStats({ total: tCount, completed: tComp });
 
       if (grades && grades.length > 0) {
@@ -143,7 +152,7 @@ export default function DashboardPage() {
           className="flex flex-col h-full"
         >
            <div className="grid grid-cols-7 gap-3 mt-4 h-full pb-8">
-              {mockHeatmap.map((v, i) => (
+              {heatmapData.map((v, i) => (
                 <div 
                   key={i} 
                   className="aspect-square rounded-xl transition-all duration-700 hover:scale-110 cursor-alias border border-white/5"
