@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
-import GlassPanel from '@/components/ui/GlassPanel';
 import BentoCard from '@/components/dashboard/BentoCard';
 import StatsTracker from '@/components/dashboard/StatsTracker';
 import Icon from '@/components/ui/Icon';
+import GlassPanel from '@/components/ui/GlassPanel';
+import ScholarisButton from '@/components/ui/ScholarisButton';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -16,7 +17,6 @@ export default function DashboardPage() {
 
   const fetchStats = useCallback(async () => {
     if (!user) return;
-
     try {
       const [{ data: tasks }, { data: grades }] = await Promise.all([
         supabase.from('tasks').select('completed').eq('user_id', user.uid),
@@ -32,7 +32,7 @@ export default function DashboardPage() {
         setAcademicGpa(((totalPercentage / grades.length) * 10).toFixed(2));
       }
     } catch (err) {
-      console.error('Data retrieval failed.');
+      console.error('Nexus synchronization failure.');
     } finally {
       setLoading(false);
     }
@@ -42,136 +42,151 @@ export default function DashboardPage() {
     fetchStats();
   }, [fetchStats]);
 
+  const mockHeatmap = Array.from({ length: 28 }, (_, i) => Math.random() > 0.4 ? (Math.random() * 100) : 0);
+
   return (
-    <div className="space-y-12 animate-fade-in-up">
-      <header className="flex justify-between items-end">
-        <div className="space-y-1">
-          <h1 className="text-5xl font-headline font-black tracking-tighter text-white uppercase italic">Nexus</h1>
-          <p className="text-on-surface-variant font-bold text-xs uppercase tracking-[0.4em]">Integrated Intelligence Matrix</p>
+    <div className="space-y-16 animate-fade-in-up pb-32">
+      {/* Elite Hero Header */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 relative">
+        <div className="space-y-3 relative z-10">
+          <div className="flex items-center gap-4">
+             <h1 className="text-6xl font-headline font-black tracking-tighter text-white uppercase italic drop-shadow-[0_0_20px_#ffffff20]">Nexus</h1>
+             <div className="h-0.5 w-16 bg-gradient-to-r from-secondary to-transparent"></div>
+          </div>
+          <p className="text-on-surface-variant font-bold text-xs uppercase tracking-[0.4em] opacity-60">Scholaris Research Portal // Node 7</p>
         </div>
-        <div className="flex items-center gap-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
-           <div className={`w-3 h-3 rounded-full ${loading ? 'bg-amber-500' : 'bg-secondary'} animate-pulse shadow-lg`}></div>
-           {loading ? 'Synchronizing...' : 'Systems Online'}
-        </div>
+        
+        <GlassPanel className="!py-3 !px-6 rounded-full border-white/5 flex items-center gap-4 group" hoverable={true} animate={false}>
+           <div className={`w-3 h-3 rounded-full ${loading ? 'bg-amber-400' : 'bg-secondary'} animate-pulse shadow-[0_0_10px_#44d8f1]`}></div>
+           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{loading ? 'Syncing Matrix...' : 'Systems Online'}</span>
+           <Icon name="verified_user" className="text-secondary text-base group-hover:rotate-[360deg] transition-transform duration-1000" />
+        </GlassPanel>
+
+        {/* Decorative background glow behind header */}
+        <div className="absolute -left-20 -top-20 w-80 h-80 bg-primary/5 blur-[120px] rounded-full" />
       </header>
 
-      {/* Main Analytical Bento Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-12 gap-8">
+      {/* Primary Analytical Grid */}
+      <section className="grid grid-cols-1 md:grid-cols-12 gap-8 auto-rows-min">
         
-        {/* Focus of the Day (Hero) */}
+        {/* Central Intelligence Hero */}
         <BentoCard 
           span={8}
-          header={{ title: "Focus of the Day", subtitle: "Active Flow Priority", icon: "bolt", iconColor: "text-amber-400" }}
-          className="relative overflow-hidden"
+          header={{ title: "Focus of the Day", subtitle: "Active Synthesis Pipeline", icon: "offline_bolt", iconColor: "text-amber-400" }}
+          className="relative min-h-[400px] flex flex-col justify-between"
         >
-          <div className="pt-4 space-y-6">
-            <div className="space-y-2">
-              <h4 className="text-3xl font-headline font-bold text-white leading-tight">Advanced Research <br/> Synthesis Phase II</h4>
-              <p className="text-on-surface-variant text-sm max-w-sm">Deep learning modules are synchronized. Isolate now to achieve peak cognitive synthesis.</p>
+          <div className="relative z-10 space-y-8">
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                 {['Neural', 'Deep Flow', 'Active'].map(tag => (
+                   <span key={tag} className="text-[8px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-white/5 border border-white/5 text-slate-400">{tag}</span>
+                 ))}
+              </div>
+              <h2 className="text-5xl font-headline font-black text-white leading-[0.9] tracking-tight">Quantum <br/> Bibliometrics</h2>
+              <p className="text-on-surface-variant text-sm max-w-sm leading-relaxed">Systematic deconstruction of archival materials into high-viscosity knowledge nodes. Node density: 84%.</p>
             </div>
-            <div className="flex items-center gap-8 pt-4">
-               <div className="flex -space-x-3">
-                 {[1,2,3].map(i => <div key={i} className="w-10 h-10 rounded-full border-2 border-surface bg-slate-800" />)}
-                 <div className="w-10 h-10 rounded-full border-2 border-surface bg-secondary/10 flex items-center justify-center text-[10px] font-bold text-secondary">+12</div>
+            
+            <div className="flex items-center gap-10">
+               <ScholarisButton variant="primary" className="!px-10 h-14">Initialize Session</ScholarisButton>
+               <div className="hidden lg:flex items-center gap-4">
+                  <div className="flex -space-x-3">
+                    {[1,2,3,4].map(i => <div key={i} className="w-10 h-10 rounded-full border-2 border-surface bg-slate-800" />)}
+                  </div>
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Collaborators Synced</span>
                </div>
-               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Shared Research Cluster</span>
             </div>
           </div>
-          {/* Decorative center glow */}
-          <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-secondary/10 blur-[100px] rounded-full" />
+
+          {/* Decorative Visualizer inside Hero Card */}
+          <div className="absolute -bottom-10 -right-10 w-64 h-64 border-[40px] border-secondary/5 rounded-full blur-2xl animate-pulse-slow"></div>
+          <div className="absolute top-1/2 -translate-y-1/2 right-12 w-1 h-32 bg-gradient-to-b from-transparent via-secondary/20 to-transparent"></div>
         </BentoCard>
 
-        {/* Global Streak (Secondary Stat) */}
+        {/* Real-time Velocity Tracker */}
         <BentoCard 
           span={4}
-          header={{ title: "Daily Pulse", subtitle: "Consistency Stream", icon: "local_fire_department" }}
-          className="flex flex-col items-center justify-center text-center"
+          header={{ title: "Daily Pulse", subtitle: "Activity Velocity", icon: "monitoring" }}
+          className="flex flex-col items-center justify-center p-12 text-center"
         >
           <StatsTracker 
-            label="Current Streak"
-            value={14}
-            subtext="Days"
-            progress={0.7}
+            label="Velocity Offset"
+            value="+14.2"
+            subtext="v/hr"
+            progress={0.75}
             size="lg"
-            color="text-amber-400"
+            color="text-secondary"
           />
         </BentoCard>
 
-        {/* Academic Analytics (Secondary Grid) */}
+        {/* The Ledger Mini-Display */}
         <BentoCard 
           span={4}
-          header={{ title: "The Ledger", subtitle: "Cumulative Growth", icon: "history_edu" }}
+          header={{ title: "Numerical Archive", subtitle: "Growth Metrics", icon: "inventory_2" }}
+          className="flex flex-col justify-center"
         >
-          <div className="flex py-6 justify-center">
+           <div className="flex justify-center py-4">
              <StatsTracker 
                label="Current GPA"
                value={academicGpa}
                subtext="/ 10.0"
                progress={Number(academicGpa) / 10}
                size="md"
+               color="text-primary"
              />
-          </div>
+           </div>
         </BentoCard>
 
-        {/* Data Analytics Overview */}
+        {/* Quantum Activity Thermal Map */}
         <BentoCard 
           span={8}
-          header={{ title: "Academic Momentum", subtitle: "Cognitive Load Variance", icon: "activity_zone", iconColor: "text-secondary" }}
-          className="flex flex-col justify-end"
+          header={{ title: "Focus Thermal Density", subtitle: "Temporal Research Heatmap", icon: "bubble_chart", iconColor: "text-secondary" }}
+          className="flex flex-col h-full"
         >
-           <div className="h-48 flex items-end justify-between px-4 gap-4 pt-12">
-            {[40, 70, 55, 90, 60, 45, 20].map((h, i) => (
-              <div 
-                key={i} 
-                className="flex-1 bg-gradient-to-t from-primary-container/20 to-secondary/40 rounded-t-2xl hover:scale-y-105 transition-transform duration-500 cursor-pointer relative group" 
-                style={{ height: `${h}%` }}
-              >
-                <div className="absolute inset-0 bg-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-t-2xl" />
-                <span className="absolute -top-10 left-1/2 -translate-x-1/2 text-[10px] font-bold text-secondary opacity-0 group-hover:opacity-100 uppercase tracking-widest">{(h/10).toFixed(1)}h</span>
-              </div>
-            ))}
-          </div>
+           <div className="grid grid-cols-7 gap-3 mt-4 h-full pb-8">
+              {mockHeatmap.map((v, i) => (
+                <div 
+                  key={i} 
+                  className="aspect-square rounded-xl transition-all duration-700 hover:scale-110 cursor-alias border border-white/5"
+                  style={{ 
+                    backgroundColor: v > 0 ? `rgba(68, 216, 241, ${v/100})` : 'rgba(255,255,255,0.02)',
+                    boxShadow: v > 50 ? `0 0 15px rgba(68, 216, 241, ${v/200})` : 'none'
+                  }}
+                ></div>
+              ))}
+           </div>
+           <div className="flex justify-between items-center text-[8px] font-bold text-slate-600 tracking-widest uppercase">
+              <span>Mon</span>
+              <span>Daily Knowledge Yield</span>
+              <span>Sun</span>
+           </div>
         </BentoCard>
 
-        {/* Task Archive Status */}
+        {/* Operational Milestone Archive (Tableized View) */}
         <BentoCard 
           span={12}
-          header={{ title: "Operational Archive", subtitle: "Task Processing Status", icon: "inventory_2" }}
-          className="hover:bg-slate-900/60"
+          header={{ title: "Archival Milestones", subtitle: "Record of Recent Synchronizations", icon: "verified" }}
         >
-          <div className="flex flex-col md:flex-row items-center justify-between gap-12 pt-8">
-             <div className="flex-1 space-y-8 w-full">
-                <div className="space-y-4">
-                   <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
-                      <span>Refinement Lifecycle</span>
-                      <span className="text-secondary">{Math.round((taskStats.completed/taskStats.total)*100) || 0}% Complete</span>
-                   </div>
-                   <div className="h-3 w-full bg-surface-container-highest/50 rounded-full overflow-hidden border border-white/5">
-                      <div 
-                        className="h-full bg-gradient-to-r from-primary-container to-secondary transition-all duration-1000 shadow-[0_0_15px_#44d8f1]" 
-                        style={{ width: `${(taskStats.completed / taskStats.total) * 100 || 0}%` }}
-                      />
-                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-8">
-                   <div className="glass-panel p-6 rounded-2xl border-white/5 bg-white/5 hover:bg-white/10 transition-colors">
-                      <div className="text-3xl font-headline font-black text-white">{taskStats.total}</div>
-                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Logged Units</div>
-                   </div>
-                   <div className="glass-panel p-6 rounded-2xl border-white/5 bg-white/5 hover:bg-white/10 transition-colors">
-                      <div className="text-3xl font-headline font-black text-secondary">{taskStats.completed}</div>
-                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Synchronized</div>
-                   </div>
-                </div>
-             </div>
-             <div className="w-56 h-56 flex-shrink-0 animate-float hidden md:block">
-                <div className="w-full h-full rounded-2xl bg-gradient-to-br from-primary-container/20 via-transparent to-secondary/20 flex items-center justify-center p-8 border border-white/5 relative group">
-                   <Icon name="verified" className="text-9xl text-white opacity-10 blur-sm group-hover:blur-none transition-all duration-700" />
-                   <div className="absolute inset-0 flex items-center justify-center">
-                     <span className="text-7xl font-headline font-black text-white/40">{taskStats.completed}</span>
-                   </div>
-                </div>
-             </div>
+          <div className="space-y-2 pt-4">
+             {[
+               { id: '1', title: 'Neural Network Synthesis', cat: 'Research', status: 'Verified', color: 'text-secondary' },
+               { id: '2', title: 'Macroeconomic Audit', cat: 'Ledger', status: 'Synchronized', color: 'text-primary' },
+               { id: '3', title: 'Binaural Flow Session', cat: 'Focus', status: 'Completed', color: 'text-amber-400' }
+             ].map((item, idx) => (
+               <div key={item.id} className={`flex items-center justify-between p-6 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group/item ${idx === 0 ? 'bg-secondary/10 border-secondary/20' : ''}`}>
+                  <div className="flex items-center gap-6">
+                    <div className={`w-2 h-2 rounded-full ${item.color} shadow-[0_0_8px_currentColor]`}></div>
+                    <span className="font-headline font-bold text-xl text-white tracking-tight">{item.title}</span>
+                  </div>
+                  <div className="flex items-center gap-8">
+                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{item.cat}</span>
+                     <span className={`text-[10px] font-bold uppercase tracking-widest ${item.color}`}>{item.status}</span>
+                     <Icon name="chevron_right" className="text-slate-600 group-hover/item:translate-x-1 transition-transform" />
+                  </div>
+               </div>
+             ))}
+          </div>
+          <div className="mt-10 flex justify-center">
+             <ScholarisButton variant="secondary" href="/dashboard/tasks" className="!px-12 !h-12 !text-[9px]">Expand Full Archive</ScholarisButton>
           </div>
         </BentoCard>
 
