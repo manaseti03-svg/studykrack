@@ -8,6 +8,7 @@ import StatsTracker from '@/components/dashboard/StatsTracker';
 import Icon from '@/components/ui/Icon';
 import GlassPanel from '@/components/ui/GlassPanel';
 import ScholarisButton from '@/components/ui/ScholarisButton';
+import AIAdvisor from '@/components/dashboard/AIAdvisor';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -41,7 +42,7 @@ export default function DashboardPage() {
         setAcademicGpa(((totalPercentage / grades.length) * 10).toFixed(2));
       }
     } catch (err) {
-      console.error('Nexus synchronization failure.');
+      console.error('Nexus synchronization failure:', err);
     } finally {
       setLoading(false);
     }
@@ -144,6 +145,11 @@ export default function DashboardPage() {
              />
            </div>
         </BentoCard>
+
+        {/* Neural AI Advisory Layer */}
+        <div className="md:col-span-12">
+          <AIAdvisor />
+        </div>
 
         {/* Quantum Activity Thermal Map */}
         <BentoCard 
