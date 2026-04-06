@@ -20,7 +20,8 @@ export interface AcademicRecord {
   score: number;
   total: number;
   weight: number;
-  date: string;
+  date?: string;
+  created_at?: string;
 }
 
 const StudyService = {
@@ -78,12 +79,12 @@ const StudyService = {
         .from('grade_records')
         .select('*')
         .eq('user_id', userId)
-        .order('date', { ascending: false });
+        .order('created_at', { ascending: false });
       
       if (error) {
         console.error('[StudyService] fetchGrades failure. Root cause:', error.message, error.details, error.hint);
-        // Fallback for demo: return empty if table missing
-        if (error.code === '42P01') return [];
+        // Fallback for demo: return empty if table missing or column missing
+        if (error.code === '42P01' || error.message.includes('column')) return [];
         throw error;
       }
       return data || [];

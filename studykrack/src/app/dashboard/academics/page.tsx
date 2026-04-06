@@ -170,7 +170,9 @@ export default function AcademicsPage() {
                 </div>
                 <div>
                   <h4 className="text-2xl font-headline font-bold text-white uppercase italic">{record.subject}</h4>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest opacity-60">{new Date(record.date).toLocaleDateString()}</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest opacity-60">
+                    {new Date(record.date || record.created_at || Date.now()).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
 
