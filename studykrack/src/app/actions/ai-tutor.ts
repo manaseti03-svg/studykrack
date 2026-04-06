@@ -46,14 +46,13 @@ Please integrate your **Gemini 1.5 Flash Key** in \`.env.local\` to activate my 
   try {
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
-      systemInstruction: SYSTEM_INSTRUCTION,
       generationConfig: {
         maxOutputTokens: 500,
         temperature: 0.7,
       }
     });
 
-    let contextualMessage = message;
+    let contextualMessage = `[SYSTEM INSTRUCTION: ${SYSTEM_INSTRUCTION}]\n\n` + message;
     if (context?.gradeRecords && context.gradeRecords.length > 0) {
       const recordsText = context.gradeRecords
         .map(r => `${r.subject}: ${r.score}/${r.total}`)

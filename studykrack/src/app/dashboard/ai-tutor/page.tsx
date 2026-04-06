@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import NeuralTutor from '@/components/dashboard/NeuralTutor';
 import GlassPanel from '@/components/ui/GlassPanel';
