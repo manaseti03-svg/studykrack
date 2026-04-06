@@ -8,7 +8,7 @@ import StatsTracker from '@/components/dashboard/StatsTracker';
 import Icon from '@/components/ui/Icon';
 import GlassPanel from '@/components/ui/GlassPanel';
 import ScholarisButton from '@/components/ui/ScholarisButton';
-import AIAdvisor from '@/components/dashboard/AIAdvisor';
+import NeuralTutor from '@/components/dashboard/NeuralTutor';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -146,9 +146,9 @@ export default function DashboardPage() {
            </div>
         </BentoCard>
 
-        {/* Neural AI Advisory Layer */}
+        {/* Neural AI Tutor / Doubt Solver */}
         <div className="md:col-span-12">
-          <AIAdvisor />
+          <NeuralTutor />
         </div>
 
         {/* Quantum Activity Thermal Map */}
