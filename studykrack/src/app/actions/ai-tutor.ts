@@ -26,7 +26,21 @@ export async function chatWithNeuralTutor(
   context?: { gradeRecords?: AcademicRecord[] }
 ) {
   if (!API_KEY) {
-    throw new Error("GEMINI_API_KEY is not configured in environment variables.");
+    console.warn("GEMINI_API_KEY is not configured. Falling back to Scholaris Mock Intelligence.");
+    // Wait for a simulated synthesis delay
+    await new Promise(r => setTimeout(r, 1500));
+    return {
+      text: `[Scholaris Mock Intelligence Mode] 
+
+I am currently running in **offline synthesis mode** as the Google Neural Link (API Key) is not yet initialized. 
+
+However, my Socratic protocols are ready! I see you are asking about: \`${message}\`. 
+
+Once the Google Neural Link is established, I will be able to synthesize high-viscosity derived formulas like:
+$$ \\frac{d}{dx} e^x = e^x $$
+
+Please integrate your **Gemini 1.5 Flash Key** in \`.env.local\` to activate my full cognitive architecture.`
+    };
   }
 
   try {

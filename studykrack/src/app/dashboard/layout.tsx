@@ -14,6 +14,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: 'home_max' },
   { name: 'Research Archive', href: '/dashboard/tasks', icon: 'check_box' },
   { name: 'The Ledger', href: '/dashboard/academics', icon: 'history_edu' },
+  { name: 'Neural Tutor', href: '/dashboard/ai-tutor', icon: 'psychology' },
   { name: 'Focus Mode', href: '/dashboard/focus', icon: 'filter_vintage' },
 ];
 

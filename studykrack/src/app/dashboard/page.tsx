@@ -9,6 +9,8 @@ import Icon from '@/components/ui/Icon';
 import GlassPanel from '@/components/ui/GlassPanel';
 import ScholarisButton from '@/components/ui/ScholarisButton';
 import NeuralTutor from '@/components/dashboard/NeuralTutor';
+import AiInsights from '@/components/dashboard/AiInsights';
+import { TaskNode, AcademicRecord } from '@/services/studyService';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -16,6 +18,8 @@ export default function DashboardPage() {
   const [academicGpa, setAcademicGpa] = useState('0.00');
   const [loading, setLoading] = useState(true);
   const [heatmapData, setHeatmapData] = useState<number[]>([]);
+  const [fullTasks, setFullTasks] = useState<TaskNode[]>([]);
+  const [fullGrades, setFullGrades] = useState<AcademicRecord[]>([]);
 
   useEffect(() => {
     // Generate mock data only on client after mount
@@ -36,6 +40,8 @@ export default function DashboardPage() {
       const tCount = tasks.length;
       const tComp = tasks.filter(t => t.completed).length;
       setTaskStats({ total: tCount, completed: tComp });
+      setFullTasks(tasks);
+      setFullGrades(grades);
 
       if (grades && grades.length > 0) {
         const totalPercentage = grades.reduce((acc, r) => acc + (r.score / r.total), 0);
@@ -144,6 +150,23 @@ export default function DashboardPage() {
                color="text-primary"
              />
            </div>
+        </BentoCard>
+
+        {/* Gemini AI Insights - NEW INTEGRATION */}
+        <div className="md:col-span-4">
+          <AiInsights tasks={fullTasks} grades={fullGrades} />
+        </div>
+
+        {/* Velocity Placeholder / Extra Slot */}
+        <BentoCard 
+          span={4}
+          header={{ title: "Matrix Stats", subtitle: "Core Performance", icon: "hub" }}
+          className="flex flex-col justify-center items-center p-8"
+        >
+          <div className="text-center space-y-2">
+            <div className="text-4xl font-headline font-black text-white">{taskStats.completed}<span className="text-lg text-slate-500">/{taskStats.total}</span></div>
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tasks Finalized</div>
+          </div>
         </BentoCard>
 
         {/* Neural AI Tutor / Doubt Solver */}
