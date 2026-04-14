@@ -18,8 +18,8 @@ StudyKrack 2.0 is not just a study tool; it is a high-performance, mobile-first 
 2. **Logic Vault & Anti-Debt Shield**
    Every generated node is permanently cached into Firestore using localized Vector Embeddings. Built with a hardcoded **Anti-Debt Shield**, the system natively throttles bot attacks and automatically rolls over request surges to verify data without unnecessarily depleting Gemini 1.5 API quotas.
 
-3. **Opal Glass UI**
-   The Next.js 15 frontend runs on a custom **Stitch v2.0 'Opal Glass'** design methodology. Utilizing high-fidelity `backdrop-blur-xl`, AMOLED-friendly Pure Black "Sentinel Mode," and real-time interactive AI Orbs, the dashboard offers a distraction-free, zero-latency psychological focus state targeting maximum retention.
+3. **Opal Glass UI & Accessible Verbiage**
+   The Next.js 15 frontend runs on a custom **Stitch v2.0 'Opal Glass'** design methodology. Utilizing high-fidelity `backdrop-blur-xl` and AMOLED-friendly Pure Black modes, the dashboard offers a distraction-free focus state. We have explicitly translated all complex engineering and tech jargon into ultra-accessible, kid-friendly verbiage (e.g., "Knowledge Vault" -> "My Learning Library") to eliminate cognitive friction.
 
 4. **₹19 Fuel Plan (Sachet Monetization)**
    Architected for sustainable AI expansion, the backend leverages a robust usage tracker natively protecting API throughput. Users on the 'Free' tier hitting their daily 5 high-precision limit hit an elegant paywall offering 'Turbo Search' prioritization for just ₹19—a scalable Fintech model optimized for Indian students.

@@ -138,9 +138,9 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
                 <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-6">
                     <span className="material-symbols-outlined text-amber-500 text-3xl">local_fire_department</span>
                 </div>
-                <h3 className="text-2xl font-headline font-bold text-white mb-3">Daily Limit Reached.</h3>
+                <h3 className="text-2xl font-headline font-bold text-white mb-3">You've answered 5 questions!</h3>
                 <p className="text-zinc-400 mb-8 font-medium text-sm leading-relaxed">
-                    Unlock 20 more High-Precision 14-Mark answers for just <span className="text-amber-400 font-bold">₹19</span>. Experience Priority Reasoning with the Fuel Plan.
+                    To ask more questions today, you can get 20 more for just <span className="text-amber-400 font-bold">₹19</span>!
                 </p>
                 <div className="flex gap-4">
                     <button onClick={() => setShowUpgradeModal(false)} className="flex-1 py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-widest text-zinc-500 hover:bg-white/5 transition-colors">
@@ -152,7 +152,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
                         setShowUpgradeModal(false);
                         // Optional: auto-retry search could be done here, but let's let user initiate again
                     }} className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 text-black font-black text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:scale-105 transition-transform">
-                        Pay ₹19
+                        Get 20 more for ₹19
                     </button>
                 </div>
             </div>
@@ -178,8 +178,8 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
             </span>
           </div>
           <h2 className="text-4xl font-headline font-bold tracking-tight leading-tight text-white">
-            {query || "Neural Research"} <br/>
-            <span className="text-on-surface-variant/60 font-light italic text-2xl">The Narrative Guide</span>
+            {query || "Search Anything"} <br/>
+            <span className="text-on-surface-variant/60 font-light italic text-2xl">Let's learn something new</span>
           </h2>
         </div>
       </section>
@@ -191,7 +191,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
           <span className="material-symbols-outlined text-on-surface-variant px-2">search</span>
           <input 
             type="text" 
-            placeholder={userPlan === 'fuel' ? "Turbo Search Neural Vault..." : "Search Neural Vault..."}
+            placeholder={userPlan === 'fuel' ? "Search very fast..." : "Search your library..."}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="bg-transparent border-none focus:ring-0 w-full text-lg placeholder:text-on-surface-variant/50 font-light text-white outline-none"
@@ -200,7 +200,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
             type="submit"
             className={`px-6 py-2 rounded-lg font-label font-bold text-sm transition-opacity active:scale-95 duration-300 ${userPlan === 'fuel' ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-black shadow-lg shadow-amber-500/20 hover:scale-105' : 'bg-primary-container text-on-primary-container hover:opacity-90'}`}
           >
-            {status === "searching" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Initiate"}
+            {status === "searching" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Go"}
           </button>
         </div>
       </form>
@@ -212,7 +212,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
            <div className="relative flex items-center bg-[#0a0a15]/90 border border-white/10 rounded-2xl p-3 backdrop-blur-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
               <input 
                 type="text" 
-                placeholder="Ask Sentinel..." 
+                placeholder="Ask me anything..." 
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="bg-transparent border-none focus:ring-0 w-full text-sm placeholder:text-zinc-500 font-medium text-white outline-none px-2"
@@ -233,7 +233,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
               <div className="ai-orb w-16 h-16 rounded-full animate-pulse flex items-center justify-center">
                  <span className="material-symbols-outlined text-on-primary text-2xl animate-spin">cyclone</span>
               </div>
-              <p className="font-label text-xs font-bold text-primary uppercase tracking-[0.4em] animate-pulse">Sentinel is researching depths...</p>
+              <p className="font-label text-xs font-bold text-primary uppercase tracking-[0.4em] animate-pulse">I am thinking...</p>
            </div>
         )}
 
@@ -242,9 +242,9 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
              <div className="ai-orb w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center opacity-50">
                 <span className="material-symbols-outlined text-primary text-3xl animate-pulse">cloud_off</span>
              </div>
-            <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-widest">Connecting to Fortress Database...</h3>
+            <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-widest">Connecting to the server...</h3>
             <p className="text-zinc-500 text-xs font-bold uppercase tracking-[0.2em] max-w-xs mx-auto">
-              Neural sync in progress. Establishing secure handshake with Muni Manas identity vault.
+              Getting things ready. Securing your information.
             </p>
           </div>
         )}
@@ -256,7 +256,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
               {result.is_from_vault && (
                 <div className="bg-tertiary text-on-tertiary px-6 py-2 rounded-full font-label font-bold text-[10px] tracking-widest uppercase flex items-center gap-2 shadow-lg success-indicator">
                   <span className="material-symbols-outlined text-lg">memory</span>
-                  Stored in Memory
+                  Read from Cache
                 </div>
               )}
               <div className="bg-secondary text-on-secondary px-6 py-2 rounded-full font-label font-bold text-[10px] tracking-widest uppercase flex items-center gap-2 shadow-lg">
@@ -303,7 +303,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
                 <div className="p-6 bg-amber-500/5 rounded-2xl border-2 border-dashed border-amber-500/30 relative group/diagram">
                   <div className="absolute -top-3 left-6 px-3 bg-[#050505] border border-amber-500/30 rounded-full flex items-center gap-2">
                     <span className="text-xs">✍️</span>
-                    <span className="text-[10px] font-label text-amber-500 font-bold uppercase tracking-widest">EXAM DIAGRAM VISUALIZER</span>
+                    <span className="text-[10px] font-label text-amber-500 font-bold uppercase tracking-widest">Draw this Diagram</span>
                   </div>
                   <p className="text-sm text-zinc-300 italic leading-relaxed pt-2">{result.diagram_desc}</p>
                 </div>
@@ -313,7 +313,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
                 <div className="p-6 bg-tertiary/10 rounded-xl border border-tertiary/20 flex gap-4 items-start text-left">
                   <span className="material-symbols-outlined text-tertiary">psychology</span>
                   <div>
-                    <p className="text-sm font-bold text-tertiary uppercase tracking-widest mb-1">Tutor Insight (Analogy)</p>
+                    <p className="text-sm font-bold text-tertiary uppercase tracking-widest mb-1">A story to help you understand</p>
                     <p className="text-on-surface text-zinc-300">{result.analogy}</p>
                   </div>
                 </div>
@@ -330,7 +330,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
                       <span className="material-symbols-outlined" style={{ fontVariationSettings: result.status === 'Mastered' ? "'FILL' 1" : "" }}>
                         {result.status === "Mastered" ? 'verified' : 'bookmark'}
                       </span>
-                      {result.status === "Mastered" ? "NODE MASTERED" : "SAVE TO LIBRARY"}
+                      {result.status === "Mastered" ? "I KNOW THIS" : "SAVE TO LIBRARY"}
                     </button>
                     
                     {result.video_resource?.url && (
@@ -343,13 +343,13 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
                     )}
                   </div>
                   <p className="text-[9px] font-label text-zinc-500 font-bold uppercase tracking-widest px-4">
-                    {result.footer || "Verified by StudyKrack 2.0 | Target: 8.5+ SGPA"}
+                    Checked by StudyKrack 2.0
                   </p>
                 </div>
 
                 <div className="flex gap-4 w-full sm:w-auto">
                   <button className="flex-1 sm:flex-none px-8 py-3 bg-gradient-to-r from-primary to-primary-container text-on-primary-container rounded-xl font-bold font-label active:scale-95 duration-300 shadow-xl">
-                    Deep Dive Study
+                    Learn More
                   </button>
                 </div>
               </footer>

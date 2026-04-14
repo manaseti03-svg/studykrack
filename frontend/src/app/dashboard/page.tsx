@@ -135,7 +135,7 @@ export default function DashboardPage() {
                 <span className="material-symbols-outlined text-xl">timer</span>
              </div>
              <div className="flex flex-col">
-                <span className="text-[9px] font-label font-bold uppercase tracking-widest text-zinc-400">Mid-Term Inbound</span>
+                <span className="text-[9px] font-label font-bold uppercase tracking-widest text-zinc-400">Exam Reminder</span>
                 <span className="text-base font-headline font-bold text-white tracking-widest">
                    {examCountdown.days}D : {examCountdown.hours.toString().padStart(2, '0')}H : {examCountdown.minutes.toString().padStart(2, '0')}M
                 </span>
@@ -146,7 +146,7 @@ export default function DashboardPage() {
             {[
               { id: "tutor", label: "Tutor", icon: "psychology" },
               { id: "library", label: "Vault", icon: "inventory_2" },
-              { id: "community", label: "Sync", icon: "hub" },
+              { id: "community", label: "Friends", icon: "hub" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -174,18 +174,18 @@ export default function DashboardPage() {
                 onClick={() => setIsOledMode(!isOledMode)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-label font-bold text-[10px] tracking-widest uppercase border transition-all ${isOledMode ? 'bg-white text-black border-white' : 'bg-surface-container-highest text-white border-white/5 hover:border-primary/20'}`}>
                  <span className="material-symbols-outlined text-lg">{isOledMode ? 'light_mode' : 'dark_mode'}</span>
-                 Sentinel Mode
+                 Dark Mode
               </button>
               <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-container-highest text-white font-label font-bold text-[10px] tracking-widest uppercase border border-white/5 hover:border-primary/20 transition-all">
                  <span className="material-symbols-outlined text-lg">settings</span>
-                 Config
+                 Settings
               </button>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex flex-col items-end">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[8px] font-label text-zinc-500 font-bold uppercase tracking-widest">Efficiency Meter</span>
-                  <span className="text-[8px] font-label text-secondary font-bold uppercase tracking-widest">8.5+ SGPA Target</span>
+                  <span className="text-[8px] font-label text-zinc-500 font-bold uppercase tracking-widest">Study Progress</span>
+                  <span className="text-[8px] font-label text-secondary font-bold uppercase tracking-widest">Good Grades Goal</span>
                 </div>
                 <div className="w-32 h-1 bg-white/5 rounded-full overflow-hidden border border-white/5 p-[1px]">
                   <div 
@@ -197,7 +197,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-3 px-3 py-1.5 bg-white/5 rounded-full border border-white/5 relative group">
                 <div className={`w-1.5 h-1.5 rounded-full ${hubStatus === 'online' ? 'bg-tertiary success-indicator shadow-[0_0_10px_rgba(74,225,131,0.5)]' : hubStatus === 'loading' ? 'bg-secondary animate-pulse' : 'bg-red-500'}`}></div>
                 <span className="font-label text-on-surface-variant font-bold text-[8px] uppercase tracking-widest leading-none">
-                  {hubStatus === 'online' ? 'STATUS: ONLINE & SYNCED' : `Neural Hub: ${hubStatus.toUpperCase()}`}
+                  {hubStatus === 'online' ? 'STATUS: READY & CONNECTED' : `Server: ${hubStatus.toUpperCase()}`}
                 </span>
               </div>
             </div>
@@ -223,9 +223,9 @@ export default function DashboardPage() {
                    <div className="ai-orb w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mb-6 md:mb-8">
                       <span className="material-symbols-outlined text-3xl md:text-4xl text-on-primary">groups</span>
                    </div>
-                   <h2 className="text-2xl md:text-3xl font-headline font-bold text-white mb-4">Cloud Sync</h2>
-                   <p className="text-on-surface-variant max-w-xs md:max-w-md mx-auto text-sm md:text-base px-6">Connecting neural networks across the platform. Establishing peer-to-peer sync...</p>
-                   <div className="mt-8 px-6 md:px-8 py-2 md:py-3 bg-primary/10 text-primary border border-primary/20 rounded-xl font-label font-bold text-[8px] md:text-[10px] tracking-[0.4em] uppercase">Phase 2: Upcoming</div>
+                   <h2 className="text-2xl md:text-3xl font-headline font-bold text-white mb-4">Cloud Backup</h2>
+                   <p className="text-on-surface-variant max-w-xs md:max-w-md mx-auto text-sm md:text-base px-6">Saving your notes and making them easy to share with your friends across the platform...</p>
+                   <div className="mt-8 px-6 md:px-8 py-2 md:py-3 bg-primary/10 text-primary border border-primary/20 rounded-xl font-label font-bold text-[8px] md:text-[10px] tracking-[0.4em] uppercase">Phase 2: Coming Soon</div>
                 </div>
               )}
             </div>
@@ -240,10 +240,10 @@ export default function DashboardPage() {
 
         {/* Footer */}
         <footer className="mt-20 pt-8 border-t border-white/5 flex justify-between items-center px-4">
-          <p className="font-label text-[9px] text-zinc-600 font-bold uppercase tracking-[0.4em]">StudyKrack Stitch Core v2.0</p>
+          <p className="font-label text-[9px] text-zinc-600 font-bold uppercase tracking-[0.4em]">StudyKrack v2.0</p>
           <div className="flex gap-4">
              <div className="w-2 h-2 rounded-full bg-tertiary success-indicator"></div>
-             <span className="font-label text-[9px] text-tertiary font-bold uppercase tracking-widest">All Systems Nominal</span>
+             <span className="font-label text-[9px] text-tertiary font-bold uppercase tracking-widest">Everything is working fine!</span>
           </div>
         </footer>
       </div>
@@ -261,8 +261,8 @@ export default function DashboardPage() {
                  <span className="material-symbols-outlined text-tertiary">rocket_launch</span>
               </div>
               <div className="flex flex-col">
-                 <span className="text-[10px] font-label font-bold uppercase tracking-[0.3em] text-tertiary drop-shadow-[0_0_8px_rgba(74,225,131,0.8)]">StudyKrack 2.0 Active</span>
-                 <span className="text-sm font-headline font-bold text-white tracking-wide">8.5+ SGPA Mission Initialized.</span>
+                 <span className="text-[10px] font-label font-bold uppercase tracking-[0.3em] text-tertiary drop-shadow-[0_0_8px_rgba(74,225,131,0.8)]">Welcome to StudyKrack 2.0</span>
+                 <span className="text-sm font-headline font-bold text-white tracking-wide">Let's get good grades!</span>
               </div>
            </div>
         </div>

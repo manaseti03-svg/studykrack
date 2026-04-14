@@ -15,10 +15,21 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// Task 2: Critical: Enable Firestore Offline Persistence
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-});
+// Task 2: Critical: Enable Firestore Offline Persistence safely for Next.js Fast Refresh
+let db: any;
+try {
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+  });
+} catch (error: any) {
+  if (error.message.includes('has already been called')) {
+    db = getFirestore(app);
+  } else {
+    throw error;
+  }
+}
+
+export { db };
 
 export const storage = getStorage(app);
 export const auth = getAuth(app);

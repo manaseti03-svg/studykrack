@@ -74,8 +74,8 @@ export default function SyllabusTracker() {
 
           <div className="space-y-1">
             <h3 className="text-2xl font-headline font-bold text-white tracking-tight">Muni Manas</h3>
-            <p className="font-label text-primary font-bold text-[10px] tracking-[0.4em] uppercase">Sree Rama Eng. College</p>
-            <p className="font-label text-white/40 font-medium text-[9px] uppercase tracking-widest">AIML | Sem 2</p>
+            <p className="font-label text-primary font-bold text-[10px] tracking-[0.4em] uppercase">My School</p>
+            <p className="font-label text-white/40 font-medium text-[9px] uppercase tracking-widest">My Class | Term 2</p>
           </div>
 
           {/* Academic Profile Bento */}
@@ -86,16 +86,16 @@ export default function SyllabusTracker() {
             </div>
             <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-4 border border-white/10 text-left relative overflow-hidden group">
               <div className="absolute inset-0 bg-secondary/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
-              <p className="font-label text-[8px] text-secondary font-bold uppercase tracking-widest mb-1 relative z-10">Target SGPA</p>
-              <p className="text-sm font-headline font-bold text-white relative z-10">8.5+</p>
+              <p className="font-label text-[8px] text-secondary font-bold uppercase tracking-widest mb-1 relative z-10">Goal Rank</p>
+              <p className="text-sm font-headline font-bold text-white relative z-10">A+ Grade</p>
             </div>
           </div>
 
           {/* 5 Units tracker rows */}
           <div className="w-full space-y-6 pt-6 border-t border-white/5">
              <h4 className="font-label text-[9px] text-zinc-500 font-bold uppercase tracking-[0.3em] text-left mb-4 flex justify-between">
-                <span>AIML Syllabus Map</span>
-                <span className="text-secondary">{processedCount}/{totalCount} Processed</span>
+                <span>My Syllabus Progress</span>
+                <span className="text-secondary">{processedCount}/{totalCount} Done</span>
              </h4>
              <div className="space-y-3">
               {data.map((unit) => (
@@ -105,7 +105,7 @@ export default function SyllabusTracker() {
                   </div>
                   <div className="flex-1 text-left">
                     <p className={`font-bold text-sm tracking-tight ${unit.is_uploaded ? 'text-white' : 'text-zinc-600'}`}>{unit.name}</p>
-                    <p className="text-[8px] font-label uppercase tracking-widest text-zinc-500">{unit.is_uploaded ? 'Indexed in Vault' : 'Awaiting PDF'}</p>
+                    <p className="text-[8px] font-label uppercase tracking-widest text-zinc-500">{unit.is_uploaded ? 'Added' : 'Waiting...'}</p>
                   </div>
                 </div>
               ))}
@@ -123,9 +123,9 @@ export default function SyllabusTracker() {
           <div>
             <h4 className="font-label text-xs text-secondary font-bold uppercase tracking-[0.2em] mb-1 flex items-center gap-2">
                <span className="material-symbols-outlined text-sm">flag</span>
-               Mission Status
+               My Progress
             </h4>
-            <p className="font-headline font-bold text-white text-2xl">Target: 8.5+ SGPA</p>
+            <p className="font-headline font-bold text-white text-2xl">Goal: A+ Grade!</p>
           </div>
           
           <div className="relative w-16 h-16 flex items-center justify-center">

@@ -33,21 +33,21 @@ export default function Library() {
         <div className="space-y-4">
           <div className="flex items-center gap-3">
              <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>inventory_2</span>
-             <span className="font-label text-on-surface-variant font-bold text-[10px] tracking-[0.4em] uppercase">Knowledge Repository</span>
+             <span className="font-label text-on-surface-variant font-bold text-[10px] tracking-[0.4em] uppercase">My Learning Library</span>
           </div>
-          <h2 className="text-5xl font-headline font-bold text-white tracking-tight">The Vault</h2>
+          <h2 className="text-5xl font-headline font-bold text-white tracking-tight">My Vault</h2>
         </div>
         
         <div className="flex gap-4">
           <div className="bg-surface-container rounded-2xl px-8 py-4 border border-white/5 flex flex-col items-center justify-center">
             <span className="text-2xl font-headline font-bold text-white">{nodes.length}</span>
-            <span className="text-[8px] font-label text-on-surface-variant font-bold uppercase tracking-widest mt-1">Archived Nodes</span>
+            <span className="text-[8px] font-label text-on-surface-variant font-bold uppercase tracking-widest mt-1">Saved Notes</span>
           </div>
           <div className="bg-surface-container rounded-2xl px-8 py-4 border border-white/5 flex flex-col items-center justify-center">
             <span className="text-2xl font-headline font-bold text-tertiary">
               {nodes.filter(n => n.status === "Mastered").length}
             </span>
-            <span className="text-[8px] font-label text-on-surface-variant font-bold uppercase tracking-widest mt-1">Mastered</span>
+            <span className="text-[8px] font-label text-on-surface-variant font-bold uppercase tracking-widest mt-1">Learned</span>
           </div>
         </div>
       </section>
@@ -86,7 +86,7 @@ export default function Library() {
         <div className="ambient-glow absolute inset-0 opacity-10"></div>
         <div className="relative z-10">
            <div className="flex justify-between items-center mb-10">
-              <h3 className="text-2xl font-headline font-bold text-white tracking-tight">Recent Archives</h3>
+              <h3 className="text-2xl font-headline font-bold text-white tracking-tight">Recent Saves</h3>
               <button className="font-label text-primary font-bold text-[10px] tracking-widest uppercase hover:underline">View All</button>
            </div>
 
@@ -94,13 +94,13 @@ export default function Library() {
              {loading ? (
                 <div className="text-center py-20 animate-pulse">
                   <span className="material-symbols-outlined text-zinc-700 text-4xl mb-4">refresh</span>
-                  <p className="text-[10px] font-label text-zinc-600 font-bold uppercase tracking-widest">Establishing Neural Handshake...</p>
+                  <p className="text-[10px] font-label text-zinc-600 font-bold uppercase tracking-widest">Loading your notes...</p>
                 </div>
              ) : nodes.length === 0 ? (
                 <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl group hover:border-primary/20 transition-colors">
                   <span className="material-symbols-outlined text-zinc-700 text-5xl mb-4 group-hover:text-primary/40 transition-colors">database_upload</span>
-                  <h4 className="text-lg font-headline font-bold text-zinc-500 mb-2">KNOWLEDGE VAULT: READY FOR INGESTION</h4>
-                  <p className="text-[9px] font-label text-zinc-600 font-bold uppercase tracking-[0.3em]">MODE: MARKS-MAXIMIZER ACTIVE</p>
+                  <h4 className="text-lg font-headline font-bold text-zinc-500 mb-2">YOUR VAULT IS READY FOR NEW NOTES</h4>
+                  <p className="text-[9px] font-label text-zinc-600 font-bold uppercase tracking-[0.3em]">LET'S SCORE HIGH GRADES!</p>
                 </div>
              ) : nodes.map((node, i) => (
                <div key={i} className="flex items-center justify-between p-6 bg-surface-container-low rounded-2xl border border-white/5 hover:border-white/10 transition-colors group">
@@ -111,9 +111,9 @@ export default function Library() {
                     <div>
                       <h4 className="font-headline font-bold text-white">{node.title}</h4>
                       <div className="flex items-center gap-3 mt-1">
-                        <span className="text-[8px] font-label text-zinc-500 font-bold uppercase tracking-widest">Vaulted {new Date(node.timestamp?.seconds * 1000).toLocaleDateString()}</span>
+                        <span className="text-[8px] font-label text-zinc-500 font-bold uppercase tracking-widest">Saved on {new Date(node.timestamp?.seconds * 1000).toLocaleDateString()}</span>
                         <div className="w-1 h-1 rounded-full bg-zinc-700"></div>
-                        <span className="text-[8px] font-label text-primary font-bold uppercase tracking-widest">{node.tag || "Core Knowledge"}</span>
+                        <span className="text-[8px] font-label text-primary font-bold uppercase tracking-widest">{node.tag || "Important Note"}</span>
                       </div>
                     </div>
                  </div>
@@ -127,7 +127,7 @@ export default function Library() {
       {/* Decorative Action */}
       <div className="flex justify-center pt-8">
         <button className="px-12 py-5 bg-white text-on-surface-container-lowest rounded-full font-headline font-bold text-sm tracking-tight hover:scale-105 active:scale-95 transition-all shadow-2xl">
-          Recall Mastered Knowledge
+          Review Learned Notes
         </button>
       </div>
     </div>
