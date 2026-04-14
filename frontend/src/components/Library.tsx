@@ -1,27 +1,30 @@
 "use client"
 import { useState, useEffect } from "react";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 
 export default function Library() {
   const [nodes, setNodes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeSubject, setActiveSubject] = useState<string | null>(null);
 
   useEffect(() => {
-    // For now, we'll fetch mastered nodes or just a sample
-    const fetchNodes = async () => {
-      try {
-        const res = await fetch("http://localhost:8000/nodes/mastered"); // Hypothetical endpoint
-        if (res.ok) {
-          const data = await res.json();
-          setNodes(data);
-        }
-      } catch (e) {
-        console.error("Library fetch failed");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchNodes();
-  }, []);
+    let q = query(collection(db, "knowledge_vault"), orderBy("timestamp", "desc"));
+    if (activeSubject) {
+      q = query(collection(db, "knowledge_vault"), where("subject_code", "==", activeSubject), orderBy("timestamp", "desc"));
+    }
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setNodes(data);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [activeSubject]);
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-12 pb-20">
@@ -37,39 +40,43 @@ export default function Library() {
         
         <div className="flex gap-4">
           <div className="bg-surface-container rounded-2xl px-8 py-4 border border-white/5 flex flex-col items-center justify-center">
-            <span className="text-2xl font-headline font-bold text-white">24</span>
-            <span className="text-[8px] font-label text-on-surface-variant font-bold uppercase tracking-widest mt-1">Saved Nodes</span>
+            <span className="text-2xl font-headline font-bold text-white">{nodes.length}</span>
+            <span className="text-[8px] font-label text-on-surface-variant font-bold uppercase tracking-widest mt-1">Archived Nodes</span>
           </div>
           <div className="bg-surface-container rounded-2xl px-8 py-4 border border-white/5 flex flex-col items-center justify-center">
-            <span className="text-2xl font-headline font-bold text-tertiary">12</span>
+            <span className="text-2xl font-headline font-bold text-tertiary">
+              {nodes.filter(n => n.status === "Mastered").length}
+            </span>
             <span className="text-[8px] font-label text-on-surface-variant font-bold uppercase tracking-widest mt-1">Mastered</span>
           </div>
         </div>
       </section>
 
-      {/* Categories Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Subject Lockers - Semester 2 Initialization */}
+      <section className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
-          { title: "Quantum Physics", count: 8, color: "primary", icon: "science" },
-          { title: "Neuroscience", count: 5, color: "secondary", icon: "psychology" },
-          { title: "Ancient India", count: 11, color: "tertiary", icon: "history_edu" }
+          { title: "Mathematics for AIML", code: "MAT201", color: "primary", icon: "functions" },
+          { title: "Data Structures & Algorithms", code: "DSA202", color: "secondary", icon: "account_tree" },
+          { title: "Digital Logic & Design", code: "DLD203", color: "tertiary", icon: "memory" },
+          { title: "Python for Data Science", code: "PDS204", color: "primary", icon: "terminal" },
+          { title: "Communicative English", code: "ENG205", color: "secondary", icon: "chat_bubble" }
         ].map((cat, i) => (
-          <div key={i} className="glass-panel p-8 rounded-[32px] group hover:scale-[1.02] transition-transform duration-500 cursor-pointer overflow-hidden relative">
-            <div className={`absolute top-0 right-0 w-24 h-24 bg-${cat.color}/10 -mr-8 -mt-8 rounded-full blur-2xl group-hover:bg-${cat.color}/20 transition-colors`}></div>
-            
-            <div className="flex justify-between items-start mb-6 relative z-10">
-              <div className={`p-4 rounded-2xl bg-${cat.color}/10 text-${cat.color}`}>
-                <span className="material-symbols-outlined text-3xl">{cat.icon}</span>
+          <div 
+            key={i} 
+            onClick={() => setActiveSubject(activeSubject === cat.code ? null : cat.code)}
+            className={`glass-panel p-6 rounded-[24px] group hover:scale-[1.05] transition-all duration-300 cursor-pointer overflow-hidden relative border 
+              ${activeSubject === cat.code ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-white/5'}`}
+          >
+            <div className="flex flex-col items-center text-center space-y-4 relative z-10">
+              <div className={`p-4 rounded-xl bg-surface-container text-${cat.color} group-hover:scale-110 transition-transform`}>
+                <span className="material-symbols-outlined text-2xl">{cat.icon}</span>
               </div>
-              <span className="material-symbols-outlined text-on-surface-variant/40 group-hover:text-white transition-colors">arrow_forward</span>
+              <div>
+                <h3 className="text-[10px] font-headline font-bold text-white leading-tight mb-1">{cat.title}</h3>
+                <p className="text-[8px] font-label text-on-surface-variant font-bold uppercase tracking-widest">{cat.code}</p>
+              </div>
             </div>
-            
-            <div className="space-y-2 relative z-10">
-              <h3 className="text-xl font-headline font-bold text-white">{cat.title}</h3>
-              <p className="text-xs font-label text-on-surface-variant font-medium underline underline-offset-4 decoration-primary/20">
-                {cat.count} High-Priority Nodes
-              </p>
-            </div>
+            <div className={`absolute bottom-0 left-0 w-full h-1 bg-${cat.color}/20`}></div>
           </div>
         ))}
       </section>
@@ -84,18 +91,29 @@ export default function Library() {
            </div>
 
            <div className="space-y-6">
-             {[1, 2, 3].map((n) => (
-               <div key={n} className="flex items-center justify-between p-6 bg-surface-container-low rounded-2xl border border-white/5 hover:border-white/10 transition-colors group">
+             {loading ? (
+                <div className="text-center py-20 animate-pulse">
+                  <span className="material-symbols-outlined text-zinc-700 text-4xl mb-4">refresh</span>
+                  <p className="text-[10px] font-label text-zinc-600 font-bold uppercase tracking-widest">Establishing Neural Handshake...</p>
+                </div>
+             ) : nodes.length === 0 ? (
+                <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl group hover:border-primary/20 transition-colors">
+                  <span className="material-symbols-outlined text-zinc-700 text-5xl mb-4 group-hover:text-primary/40 transition-colors">database_upload</span>
+                  <h4 className="text-lg font-headline font-bold text-zinc-500 mb-2">KNOWLEDGE VAULT: READY FOR INGESTION</h4>
+                  <p className="text-[9px] font-label text-zinc-600 font-bold uppercase tracking-[0.3em]">MODE: MARKS-MAXIMIZER ACTIVE</p>
+                </div>
+             ) : nodes.map((node, i) => (
+               <div key={i} className="flex items-center justify-between p-6 bg-surface-container-low rounded-2xl border border-white/5 hover:border-white/10 transition-colors group">
                  <div className="flex items-center gap-6">
                     <div className="w-12 h-12 rounded-xl bg-surface-container-highest flex items-center justify-center text-primary font-bold">
-                      {n}
+                      {i + 1}
                     </div>
                     <div>
-                      <h4 className="font-headline font-bold text-white">Heisenberg's Uncertainty Principle</h4>
+                      <h4 className="font-headline font-bold text-white">{node.title}</h4>
                       <div className="flex items-center gap-3 mt-1">
-                        <span className="text-[8px] font-label text-zinc-500 font-bold uppercase tracking-widest">Mastered 2h ago</span>
+                        <span className="text-[8px] font-label text-zinc-500 font-bold uppercase tracking-widest">Vaulted {new Date(node.timestamp?.seconds * 1000).toLocaleDateString()}</span>
                         <div className="w-1 h-1 rounded-full bg-zinc-700"></div>
-                        <span className="text-[8px] font-label text-primary font-bold uppercase tracking-widest">Physics Core</span>
+                        <span className="text-[8px] font-label text-primary font-bold uppercase tracking-widest">{node.tag || "Core Knowledge"}</span>
                       </div>
                     </div>
                  </div>

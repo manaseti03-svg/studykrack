@@ -2,34 +2,144 @@ import os
 import json
 import time
 import re
+import threading
 import numpy as np
 from typing import List, Optional
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import google.generativeai as genai
 from PyPDF2 import PdfReader
-from google.cloud import firestore
+import firebase_admin
+from firebase_admin import credentials, firestore, storage
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
-from sentinel_research import perform_sentinel_research, bulk_research
+from sentinel_research import perform_sentinel_research, bulk_research, marksman_agentic_loop
 from fpdf import FPDF
 from fastapi.responses import FileResponse
-
-def cosine_similarity(v1, v2):
-    dot_product = np.dot(v1, v2)
-    norm_v1 = np.linalg.norm(v1)
-    norm_v2 = np.linalg.norm(v2)
-    if norm_v1 == 0 or norm_v2 == 0:
-        return 0
-    return dot_product / (norm_v1 * norm_v2)
 
 # Load environment variables
 load_dotenv()
 
 app = FastAPI()
 
-# CORS Setup - Task 1: Explicit Localhost Authorization
+# Task 2: Firebase Admin Initialization
+project_id = os.getenv("FIREBASE_PROJECT_ID")
+storage_bucket = os.getenv("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET")
+
+try:
+    key_path = os.path.join(os.getcwd(), 'serviceAccountKey.json')
+    if os.path.exists(key_path):
+        cred = credentials.Certificate(key_path)
+        firebase_admin.initialize_app(cred, {
+            'storageBucket': storage_bucket
+        })
+    else:
+        # Fallback to default auth
+        firebase_admin.initialize_app(options={
+            'storageBucket': storage_bucket
+        })
+    db = firestore.client()
+    print(f"[SYSTEM] Firebase Admin & Storage Bucket {storage_bucket} Connected.")
+except Exception as e:
+    print(f"[WARNING] Firebase Admin Failure: {e}. Falling back to default.")
+    db = None
+
+def clean_text(text: str) -> str:
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
+
+# AI Setup
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+embed_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+# --- CLOUD VAULT LISTENER ---
+def process_cloud_pdf(blob_name):
+    try:
+        print(f"[MARKSMAN] [CLOUD] Indexing: {blob_name}")
+        bucket = storage.bucket()
+        blob = bucket.blob(blob_name)
+        
+        # 1. Download content
+        import io
+        pdf_bytes = blob.download_as_bytes()
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        pages = [page.extract_text() or "" for page in reader.pages]
+        
+        # 2. Process Chapters (Same as local forge)
+        CHAPTER_SIZE = 5
+        chapters = [" ".join(pages[i:i + CHAPTER_SIZE]) for i in range(0, len(pages), CHAPTER_SIZE)]
+        
+        for chapter_idx, chapter_text in enumerate(chapters):
+            cleaned_text = clean_text(chapter_text)
+            
+            prompt = f"""
+            Role: Senior Academic Examiner (Marksman Mode).
+            Source: {blob_name}
+            Task: Extract high-density 14-Mark academic concepts.
+            Return JSON: array of {{'title', 'definition', 'breakdown', 'diagram_desc', 'application'}}.
+            Text: {cleaned_text[:8000]}
+            """
+            
+            response = gemini_model.generate_content(prompt)
+            ai_output = response.text.replace("```json", "").replace("```", "").strip()
+            concepts = json.loads(ai_output)
+            
+            if db:
+                batch = db.batch()
+                for concept in concepts:
+                    header = f"{concept['title']} {concept['definition']}"
+                    embedding = embed_model.encode(header).tolist()
+                    concept_ref = db.collection("knowledge_vault").document()
+                    batch.set(concept_ref, {
+                        **concept,
+                        "summary": concept['definition'],
+                        "key_points": [s.strip() for s in concept['breakdown'].split(".") if len(s.strip()) > 5],
+                        "subject_name": "Cloud Vault",
+                        "timestamp": time.time(),
+                        "embedding": embedding,
+                        "is_ai": True,
+                        "source_file": blob_name,
+                        "tag": "Semester: 2 | Branch: AIML | Cloud Sync",
+                        "status": "Archived",
+                        "footer": "Indexed by StudyKrack Cloud Listener"
+                    })
+                batch.commit()
+        print(f"[MARKSMAN] [SUCCESS] Cloud File Fully Vaulted: {blob_name}")
+    except Exception as e:
+        print(f"[ERROR] [CLOUD INDEX] {e}")
+
+def storage_listener():
+    print("[SYSTEM] [LISTENER] Cloud Vault Monitor Thread Started.")
+    processed_files = set()
+    
+    # Pre-populate to avoid re-indexing
+    try:
+        bucket = storage.bucket()
+        blobs = bucket.list_blobs(prefix="study_vault/")
+        for b in blobs:
+            processed_files.add(b.name)
+    except:
+        pass
+
+    while True:
+        try:
+            bucket = storage.bucket()
+            blobs = bucket.list_blobs(prefix="study_vault/")
+            for b in blobs:
+                if b.name not in processed_files and b.name.endswith(".pdf"):
+                    processed_files.add(b.name)
+                    process_cloud_pdf(b.name)
+        except Exception as e:
+            # print(f"[LISTENER ERROR] {e}")
+            pass
+        time.sleep(30)
+
+# Start listener thread
+threading.Thread(target=storage_listener, daemon=True).start()
+
+# CORS Setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:3001", "*"], 
@@ -37,19 +147,6 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
-
-# AI Setup (Gemini 1.5 Flash)
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-gemini_model = genai.GenerativeModel("gemini-1.5-flash")
-
-# Task 2: Global Service Initialization
-print("[GOVERNOR] [READY] Initializing API Quota Monitoring...")
-print("[SENTINEL] [READY] Loading Neural Embedding Engine...")
-embed_model = SentenceTransformer('all-MiniLM-L6-v2')
-print("[SYSTEM] [Portal] Neural Hub is Online and Secure.")
-
-# Firebase/Firestore Setup - Task 1: The Firestore Handshake
-project_id = os.getenv("FIREBASE_PROJECT_ID")
 
 # --- MOCK DATA FOR STABILITY ---
 MOCK_SYLLABUS = [
@@ -65,24 +162,6 @@ MOCK_METRICS = {
     "total_focus_minutes": 480,
     "money_saved": 640
 }
-
-try:
-    if not project_id or "your_project_id" in project_id:
-        raise ValueError("FIREBASE_PROJECT_ID is invalid or missing")
-    
-    # Task 1: Path Fix - Using Absolute Current Working Directory
-    key_path = os.path.join(os.getcwd(), 'serviceAccountKey.json')
-    
-    if os.path.exists(key_path):
-        db = firestore.Client.from_service_account_json(key_path)
-    else:
-        # Fallback to default search in root
-        db = firestore.Client(project=project_id)
-        
-    print(f"[SYSTEM] Gemini & Firebase are now LIVE and SECURE.")
-except Exception as e:
-    print(f"[WARNING] Database Handshake Failure: {e}. Activating Maintenance Shield.")
-    db = None
 
 class SearchQuery(BaseModel):
     query: str
@@ -161,6 +240,64 @@ def check_api_quota(increment: bool = True):
         if increment:
             raise HTTPException(status_code=500, detail="Governor Protocol offline. Blocking request.")
 
+MOCK_USERS = {}
+
+def check_user_quota(uid: str = "muni_manas_01"):
+    """
+    Task 1: The Usage Tracker (₹19 Fuel Plan)
+    Task 4: Anti-Debt Protection
+    """
+    global MOCK_USERS
+    now = time.time()
+    
+    user_data = None
+    user_ref = None
+    if db:
+        user_ref = db.collection("users").document(uid)
+        doc = user_ref.get()
+        if doc.exists:
+            user_data = doc.to_dict()
+        else:
+            user_data = {"daily_usage_count": 0, "subscription_status": "free", "hourly_requests": [], "abuse_flagged": False}
+    else:
+        if uid not in MOCK_USERS:
+            MOCK_USERS[uid] = {"daily_usage_count": 0, "subscription_status": "free", "hourly_requests": [], "abuse_flagged": False}
+        user_data = MOCK_USERS[uid]
+
+    if user_data.get("abuse_flagged", False):
+        raise HTTPException(status_code=403, detail="Anti-Debt Protection Active: Account temporarily flagged.")
+
+    hourly = [t for t in user_data.get("hourly_requests", []) if now - t < 3600]
+    hourly.append(now)
+    
+    if len(hourly) > 50:
+        user_data["abuse_flagged"] = True
+        user_data["hourly_requests"] = hourly
+        if db:
+            user_ref.set(user_data, merge=True)
+        else:
+            MOCK_USERS[uid] = user_data
+        raise HTTPException(status_code=403, detail="Anti-Debt Protection: High traffic. Account flagged.")
+
+    daily_count = user_data.get("daily_usage_count", 0)
+    status = user_data.get("subscription_status", "free")
+    
+    if status == "free" and daily_count >= 5:
+        user_data["hourly_requests"] = hourly
+        if db: user_ref.set(user_data, merge=True)
+        else: MOCK_USERS[uid] = user_data
+        raise HTTPException(status_code=402, detail="Daily Limit Reached")
+
+    user_data["daily_usage_count"] = daily_count + 1
+    user_data["hourly_requests"] = hourly
+    
+    if db:
+        user_ref.set(user_data, merge=True)
+    else:
+        MOCK_USERS[uid] = user_data
+
+    return status
+
 @app.get("/health")
 async def health():
     return {
@@ -209,6 +346,32 @@ async def get_metrics():
         print(f"Metrics fetch error: {e}")
         # Task 1: Return 200 OK with maintenance status instead of 500
         return {"data": MOCK_METRICS, "status": "maintenance"} if not db else {"remaining_quota": 0, "topics_archived": 0, "topics_mastered": 0, "total_focus_minutes": 0, "money_saved": 0}
+
+@app.get("/api/user/status")
+async def get_user_status(uid: str = "muni_manas_01"):
+    if db:
+        doc = db.collection("users").document(uid).get()
+        if doc.exists: return doc.to_dict()
+        return {"daily_usage_count": 0, "subscription_status": "free"}
+    else:
+        return MOCK_USERS.get(uid, {"daily_usage_count": 0, "subscription_status": "free"})
+
+@app.post("/api/user/upgrade")
+async def upgrade_user(uid: str = "muni_manas_01"):
+    if db:
+        user_ref = db.collection("users").document(uid)
+        doc = user_ref.get()
+        if not doc.exists:
+            user_ref.set({"daily_usage_count": 0, "subscription_status": "fuel", "hourly_requests": [], "abuse_flagged": False})
+        else:
+            user_ref.update({"subscription_status": "fuel", "daily_usage_count": 0})
+    else:
+        if uid not in MOCK_USERS:
+            MOCK_USERS[uid] = {"daily_usage_count": 0, "subscription_status": "fuel", "hourly_requests": [], "abuse_flagged": False}
+        else:
+            MOCK_USERS[uid]["subscription_status"] = "fuel"
+            MOCK_USERS[uid]["daily_usage_count"] = 0
+    return {"status": "success", "message": "Upgraded to Fuel Plan"}
 
 @app.post("/focus/log")
 async def log_focus_session(data: FocusLog):
@@ -270,32 +433,55 @@ async def forge_note(file: UploadFile = File(...), subject_name: str = Form("Gen
         raise HTTPException(status_code=400, detail="PDF only")
     try:
         reader = PdfReader(file.file)
-        raw_text = "".join([page.extract_text() or "" for page in reader.pages])
-        cleaned_text = clean_text(raw_text)
-        check_api_quota()
-        prompt = f"Extract high-density academic concepts. Return JSON: 'title', 'summary', 'key_points'. Text: {cleaned_text[:8000]}"
-        response = gemini_model.generate_content(prompt)
-        ai_output = response.text.replace("```json", "").replace("```", "").strip()
-        concepts = json.loads(ai_output)
+        pages = [page.extract_text() or "" for page in reader.pages]
+        
+        # Task 2: Smart Chunking for T480 Stability
+        # Break into "Chapters" (approx 5 pages each)
+        CHAPTER_SIZE = 5
+        chapters = [" ".join(pages[i:i + CHAPTER_SIZE]) for i in range(0, len(pages), CHAPTER_SIZE)]
+        
+        all_concepts = []
+        for chapter_idx, chapter_text in enumerate(chapters):
+            cleaned_text = clean_text(chapter_text)
+            check_api_quota()
+            
+            prompt = f"""
+            Role: Senior Academic Examiner (Marksman Mode).
+            Task: Extract high-density 14-Mark academic concepts from Chapter {chapter_idx + 1}.
+            Return JSON: array of {{'title', 'definition', 'breakdown', 'diagram_desc', 'application'}}.
+            Text: {cleaned_text[:8000]}
+            """
+            
+            response = gemini_model.generate_content(prompt)
+            ai_output = response.text.replace("```json", "").replace("```", "").strip()
+            concepts = json.loads(ai_output)
+            all_concepts.extend(concepts)
+
         if db:
             batch = db.batch()
-            for concept in concepts:
-                header = f"{concept['title']} {concept['summary']}"
+            for concept in all_concepts:
+                header = f"{concept['title']} {concept['definition']}"
                 embedding = embed_model.encode(header).tolist()
-                concept_ref = db.collection("community_library").document()
+                concept_ref = db.collection("knowledge_vault").document()
                 batch.set(concept_ref, {
                     **concept,
+                    "summary": concept['definition'], # Compatibility
+                    "key_points": [s.strip() for s in concept['breakdown'].split(".") if len(s.strip()) > 5],
                     "subject_name": subject_name,
+                    "subject_code": subject_name, # Routing
                     "timestamp": time.time(),
                     "verified": True,
                     "source_file": file.filename,
                     "embedding": embedding,
-                    "is_ai": False,
-                    "status": "Archived"
+                    "is_ai": True,
+                    "tag": "Semester: 2 | Branch: AIML",
+                    "status": "Archived",
+                    "footer": "Verified by StudyKrack 2.0 | Marksman Mode"
                 })
             batch.commit()
-        return {"status": "success", "count": len(concepts)}
+        return {"status": "success", "count": len(all_concepts)}
     except Exception as e:
+        print(f"Ingestion Failure: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/search")
@@ -345,14 +531,17 @@ async def pulse_radar_search(search_query: SearchQuery):
         results.sort(key=lambda x: x["score"], reverse=True)
         best_score = results[0]["score"] if results else 0
         if best_score < 0.85:
-            researched_concept = perform_sentinel_research(search_query.query, gemini_model, embed_model, db, check_api_quota)
+            # Check user quota before proceeding with Marksman Agentic Loop
+            user_plan = check_user_quota()
+            from sentinel_research import marksman_agentic_loop
+            researched_concept = marksman_agentic_loop(search_query.query, gemini_model, embed_model, db, check_api_quota)
             header = f"{researched_concept['title']} {researched_concept['summary']}"
             embedding = embed_model.encode(header).tolist()
             doc_data = {
                 **researched_concept,
                 "subject_name": "AI Research",
                 "timestamp": time.time(),
-                "verified": researched_concept.get("is_verified", False),
+                "verified": researched_concept.get("verified", True),
                 "embedding": embedding,
                 "is_ai": True,
                 "score": 1.0,

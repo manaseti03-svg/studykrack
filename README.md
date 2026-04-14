@@ -1,79 +1,89 @@
-# StudyKrack 2.0 
+# StudyKrack 2.0: The Academic Intelligence OS
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=for-the-badge&logo=fastapi)
 ![Firebase](https://img.shields.io/badge/Firebase-Firestore-FFCA28?style=for-the-badge&logo=firebase)
 ![Gemini](https://img.shields.io/badge/Gemini-1.5_Flash-4285F4?style=for-the-badge&logo=googlegemini)
 
-> **"Turning Syllabus Chaos into Exam Mastery."**  
-> StudyKrack 2.0 is an industrial-grade academic operating system built to streamline the engineering journey. Designed for high-performance retrieval and deep focus, it serves as the ultimate "Neural Hub" for the modern AIML student.
+> **Mission Objective:** Engineered to bridge the gap between a 7.27 and an 8.5+ SGPA using Agentic RAG and highly specialized exam-driven intelligence loops.
+
+StudyKrack 2.0 is not just a study tool; it is a high-performance, mobile-first academic fortress. Designed to operate identically to a "Mission Control Center," it intelligently processes, analyzes, and translates vast engineering syllabi into strict, high-density exam formats using localized AI architecture.
 
 ---
 
-## 👨‍💻 Developer Profile
-**Muni Manas**  
-*AIML Undergraduate | Semester 2*  
-**Mission:** 8.5+ SGPA | **Status:** Industrial Build 2.0  
-*Sree Rama Engineering College*
+## 🔥 Core Infrastructure & Features
+
+1. **Marksman Agentic Loop**
+   StudyKrack completely reinvents automated reasoning by prioritizing the **Standard Engineering Rubric**. The Marksman AI doesn't just answer queries; it evaluates them directly against University 14-Mark grading schemas, isolating conceptual overviews, dense technical proofs, and strict examiner diagram notes. If data is missing from the local vault, it refuses to hallucinate facts.
+
+2. **Logic Vault & Anti-Debt Shield**
+   Every generated node is permanently cached into Firestore using localized Vector Embeddings. Built with a hardcoded **Anti-Debt Shield**, the system natively throttles bot attacks and automatically rolls over request surges to verify data without unnecessarily depleting Gemini 1.5 API quotas.
+
+3. **Opal Glass UI**
+   The Next.js 15 frontend runs on a custom **Stitch v2.0 'Opal Glass'** design methodology. Utilizing high-fidelity `backdrop-blur-xl`, AMOLED-friendly Pure Black "Sentinel Mode," and real-time interactive AI Orbs, the dashboard offers a distraction-free, zero-latency psychological focus state targeting maximum retention.
+
+4. **₹19 Fuel Plan (Sachet Monetization)**
+   Architected for sustainable AI expansion, the backend leverages a robust usage tracker natively protecting API throughput. Users on the 'Free' tier hitting their daily 5 high-precision limit hit an elegant paywall offering 'Turbo Search' prioritization for just ₹19—a scalable Fintech model optimized for Indian students.
 
 ---
 
-## 🛠️ The Industrial Tech Stack
-StudyKrack 2.0 is powered by a high-concurrency, low-latency architecture designed for scalability and reliability.
+## 🛠 Tech Stack
 
-- **Frontend:** **Next.js 15** (App Router) – Utilizing the latest React features for a seamless, SPA-like experience.
-- **Backend:** **FastAPI** (Python) – An asynchronous high-performance framework for handling complex AI logic and database operations.
-- **Database:** **Firebase Firestore** – A real-time NoSQL database used as a global knowledge vault.
-- **Intelligence:** **Gemini 1.5 Flash** – Google's state-of-the-art LLM optimized for high-speed, high-context academic research.
-- **PWA Ready:** Full support for mobile installation, transforming the web dashboard into a standalone mobile "OS".
+**Frontend Pipeline:**
+- **Framework:** Next.js 15 (React 19)
+- **Styling:** Tailwind CSS (Custom Design Tokens)
+- **Architecture:** Mobile-First PWA (Progressive Web Application)
 
----
+**Backend Intelligence:**
+- **Engine:** Python / FastAPI
+- **Cloud Brain:** Gemini 1.5 Flash API
+- **Embedding:** `SentenceTransformers` (`all-MiniLM-L6-v2`)
 
-## 🛡️ Security Protocol: The Logic Shield
-The **Logic Shield** is an integrated security layer designed to protect the system's integrity and user data.
-
-- **Credential Isolation:** All API keys (Gemini, Firebase) and environment configurations are strictly isolated within a `.env` architecture. No sensitive data is ever exposed to the frontend or hardcoded.
-- **Request Sanitization:** The FastAPI backend acts as a gateway, validating every incoming request to prevent unauthorized access to the Intelligence Layer.
-- **Rate Limiting:** Protects against API abuse, ensuring "Zero-Cost" persistence is always the priority.
-
----
-
-## 🛰️ The Sentinel Pathway: Local-First Intelligence
-StudyKrack 2.0 implements a **Vector-Cached Persistence** logic to maximize performance while minimizing operational costs.
-
-- **Firestore as a Vector Library:** Instead of redundant AI calls, StudyKrack uses Firestore to store high-fidelity, "14-mark" verified answers.
-- **Semantic Retrieval:** When a user queries a topic, the "Sentinel" checks the cached vault first. If a match is found, the data is served instantly at **Zero API Cost**.
-- **The 14-Mark Standard:** Every AI-generated response is structured specifically for Indian engineering exams—complete with technical bullet points, diagrams descriptions, and exam hacks.
+**State & Persistence (Firebase):**
+- **Database:** Firestore (with Native Offline Resilience)
+- **File System:** Core Firebase Storage
+- **Identity:** Fast & secure authentication boundaries
 
 ---
 
-## 🚀 Industrial Launch Sequence
-To deploy the full StudyKrack ecosystem in a production-simulated environment, follow these steps:
+## 🚀 Installation & Launch Protocols
 
-### 1. Clear Port Conflicts
-Ensure the backend port is free before initialization.
-```powershell
-npx kill-port 8000
+### Phase 1: Local T480 Setup
+
+#### 1. Database Configuration
+Create a `.env` file in your root folder and map your critical variables:
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your_key
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_bucket
+GEMINI_API_KEY=your_gemini_key
+```
+*Ensure `serviceAccountKey.json` is placed inside the `/backend` directory for Admin persistence.*
+
+#### 2. Spin Up Neural Backend
+Engage the FastAPI Logic Engine via `uvicorn`:
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
 ```
 
-### 2. Initialize the Intelligence (Backend)
-Navigate to the `/backend` directory and run the FastAPI server.
-```powershell
-python main.py
-```
-
-### 3. Launch the Terminal (Frontend)
-Navigate to the `/frontend` directory and start the Next.js development server.
-```powershell
+#### 3. Engage Frontend Radar
+Initialize the Next.js Opal Glass Interface:
+```bash
+cd frontend
+npm install
 npm run dev
 ```
+Navigate to `http://localhost:3000` to interact with the console.
+
+### Phase 2: Mobile PWA Integration
+StudyKrack incorporates robust offline resilience caches natively hooked into the Android/iOS environment. 
+1. Access the Next.js port via your local network IP directly from your mobile browser.
+2. Tap the `Install StudyKrack` button organically rendered in the header or use the browser prompt to snap StudyKrack explicitly to your Mobile Home Screen. 
+3. **Airplane Mode verified:** The frontend Service Worker handles visual persistence seamlessly.
 
 ---
 
-## 📱 PWA Support
-StudyKrack 2.0 is a fully compliant **Progressive Web App**. 
-- **Desktop:** Install via the browser address bar for a windowed experience.
-- **Mobile:** "Add to Home Screen" for a native app feel on Android and iOS, allowing for quick access to your "Academic Fortress" on the go.
-
----
-
-*This project serves as a professional portfolio piece demonstrating proficiency in Full-Stack AI/ML application architecture and industrial-grade software engineering principles.*
+*Architected by Muni Manas | Sree Rama Engineering College | AIML 2026*

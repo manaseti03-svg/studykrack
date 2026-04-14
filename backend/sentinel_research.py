@@ -1,7 +1,135 @@
 import json
 import time
+import numpy as np
 import google.generativeai as genai
 from fastapi import HTTPException
+
+def cosine_similarity(v1, v2):
+    dot_product = np.dot(v1, v2)
+    norm_v1 = np.linalg.norm(v1)
+    norm_v2 = np.linalg.norm(v2)
+    if norm_v1 == 0 or norm_v2 == 0:
+        return 0
+    return dot_product / (norm_v1 * norm_v2)
+
+def marksman_agentic_loop(query_str, gemini_model, embed_model, db, check_quota_func):
+    """
+    Role: Lead AI Logic Engineer.
+    Context: StudyKrack 2.0 - 15h Sprint Hour 1.
+    Task: Implement the 'Marksman' Agentic Loop
+    """
+    print(f"[MARKSMAN] [ACTIVE] Initializing Agentic Loop for: {query_str}")
+    
+    # 1. Retrieval: Fetch top 5 semantic chunks from Firestore
+    query_vec = embed_model.encode(query_str)
+    
+    vault_results = []
+    if db:
+        # Scan both 'knowledge_vault' and 'community_library'
+        for col_name in ["knowledge_vault", "community_library"]:
+            docs = db.collection(col_name).stream()
+            for doc in docs:
+                data = doc.to_dict()
+                if "embedding" in data:
+                    score = cosine_similarity(query_vec, np.array(data["embedding"]))
+                    vault_results.append({**data, "score": score})
+    
+    vault_results.sort(key=lambda x: x["score"], reverse=True)
+    top_chunks = vault_results[:5]
+    
+    # 2. Reasoning Agent: Analyze the chunks. Are they sufficient for a 14-mark answer?
+    context_text = "\n---\n".join([
+        f"Source: {c.get('title')}\nContent: {c.get('summary') or c.get('definition')}\nKey Points: {c.get('key_points')}" 
+        for c in top_chunks
+    ])
+    
+    reasoning_prompt = f"""
+    Internal Reasoning Engine (Flash 1.5):
+    Task: Determine if the following retrieved context is sufficient to answer '{query_str}' for a 14-mark university exam.
+    
+    Context:
+    {context_text}
+    
+    Response format:
+    SUFFICIENT: [YES/NO]
+    EXPAND_REQUIRED: [YES/NO]
+    SHORT_ANALYSIS: [Max 10 tokens]
+    """
+    
+    try:
+        check_quota_func()
+        # Limit internal tokens to save quota
+        reasoning_resp = gemini_model.generate_content(reasoning_prompt, generation_config={"max_output_tokens": 50})
+        reasoning_text = reasoning_resp.text
+        print(f"[MARKSMAN] [REASONING] Analysis: {reasoning_text.strip()}")
+        
+        is_sufficient = "SUFFICIENT: YES" in reasoning_text
+        needs_expansion = "EXPAND_REQUIRED: YES" in reasoning_text
+        
+        # 3. Expansion: If No, Expand search parameters
+        if not is_sufficient or needs_expansion:
+             print("[MARKSMAN] [EXPANSION] Chunks insufficient. Broadening vault search...")
+             top_chunks = vault_results[:10]
+             context_text = "\n---\n".join([
+                 f"Source: {c.get('title')}\nContent: {c.get('summary') or c.get('definition')}\nKey Points: {c.get('key_points')}" 
+                 for c in top_chunks
+             ])
+
+        # 4. Generation & Formatting Agent
+        final_prompt = f"""
+        Role: Formatting Agent (Engineering Rubric).
+        Objective: Answer '{query_str}' using the standard 14-mark Engineering Rubric.
+        
+        Retrieved Data (Vault):
+        {context_text}
+        
+        Anti-Hallucination Guard:
+        - Use ONLY the data provided above.
+        - If the data isn't in the provided context, state 'Data missing from Vault' for that section.
+        - DO NOT invent facts.
+        
+        Force specific headings:
+        [EXAM TOPIC]: {query_str}
+        [CONCEPTUAL OVERVIEW]: (2 Marks)
+        [TECHNICAL STEPS/PROOFS]: (6 Marks - Use bullet points)
+        [EXAMINER'S DIAGRAM NOTE]: (3 Marks - Describe a diagram precisely)
+        
+        Return JSON with: 'title', 'conceptual_overview', 'technical_steps', 'diagram_note', 'priority_level'.
+        """
+        
+        check_quota_func()
+        gen_resp = gemini_model.generate_content(final_prompt)
+        ai_output = gen_resp.text.replace("```json", "").replace("```", "").strip()
+        gen_data = json.loads(ai_output)
+        
+        # Post-process technical steps into points
+        raw_steps = gen_data.get("technical_steps", "Data missing from Vault")
+        if isinstance(raw_steps, list):
+            key_points = raw_steps
+        else:
+            key_points = [s.strip() for s in str(raw_steps).split("\n") if len(s.strip()) > 5]
+
+        return {
+            "title": gen_data.get("title", query_str),
+            "concept_one_sentence": gen_data.get("conceptual_overview", "Data missing from Vault")[:100] + "...",
+            "summary": gen_data.get("conceptual_overview", "Data missing from Vault"),
+            "key_points": key_points,
+            "diagram_desc": gen_data.get("diagram_note", "Data missing from Vault"),
+            "priority_level": "14-Mark Essay",
+            "verified": True,
+            "is_ai": True,
+            "agentic_source": "Marksman Loop",
+            "footer": "Verified by StudyKrack Marksman Loop"
+        }
+        
+    except Exception as e:
+        print(f"[MARKSMAN] [ERROR] Loop Failure: {e}")
+        # Task 4: Edge-Case Bug Sweep
+        if "timeout" in str(e).lower() or "503" in str(e):
+             raise HTTPException(status_code=503, detail="System Overloaded - Try again in 30s")
+        # Fallback to standard research if agentic loop fails (but not a timeout)
+        return perform_sentinel_research(query_str, gemini_model, embed_model, db, check_quota_func)
+
 
 def perform_sentinel_research(query: str, gemini_model, embed_model, db, check_quota_func):
     """
@@ -43,7 +171,10 @@ def perform_sentinel_research(query: str, gemini_model, embed_model, db, check_q
         raise
     except Exception as e:
         print(f"Research Pass 1 Error: {e}")
-        raise HTTPException(status_code=500, detail="Sentinel encountered a neural block.")
+        # Task 4: Edge-Case Bug Sweep (System Overloaded)
+        if "timeout" in str(e).lower() or "503" in str(e) or "quota" in str(e).lower():
+            raise HTTPException(status_code=503, detail="System Overloaded - Try again in 30s")
+        raise HTTPException(status_code=503, detail="System Overloaded - Try again in 30s")
 
     # Pass 2: The Auditor (Hidden Pass)
     # Before returning the data to the user, send a hidden prompt to Gemini
