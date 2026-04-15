@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Function to ensure the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Function to ensure the document belongs to the requesting user
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // 1. Users collection locked strictly to request.auth.uid
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // 2. Vault collections strictly locked
+    // If vault nodes have an owner_id or user_id, check it, else lock it to creation.
+    // Assuming vault documents store the creator's uid in 'owner_id' or 'userId'
+    match /knowledge_vault/{documentId} {
+      allow read, update, delete: if isAuthenticated() && resource.data.owner_id == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.owner_id == request.auth.uid;
+    }
+    
+    match /community_library/{documentId} {
+      // If community_library is shared but locked to creators for editing
+      allow read: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && resource.data.owner_id == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.owner_id == request.auth.uid;
+    }
+
+    // 3. public_syllabus collection is Read-Only for authenticated users
+    match /public_syllabus/{documentId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Strict Read-Only
+    }
+    
+    // Other collections (System metrics etc allowed internally but denied externally)
+    match /{document=**} {
+      allow read, write: if false; 
+    }
+  }
+}

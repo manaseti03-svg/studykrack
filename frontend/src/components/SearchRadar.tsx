@@ -11,6 +11,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "searching" | "success" | "error">("idle");
+  const [isDeepResearch, setIsDeepResearch] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [activeVideo, setActiveVideo] = useState({ url: "", title: "" });
   const [isBackendOnline, setIsBackendOnline] = useState(false);
@@ -50,22 +51,24 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
     setStatus("searching");
     
     try {
-      // 1. Priority 1: Search the Knowledge Vault (Zero Cost)
-      const { vaultPrioritySearch } = await import("@/lib/aiService");
-      const vaultHits = await vaultPrioritySearch(query);
-      
-      if (vaultHits.length > 0) {
-        console.log("[RADAR] Vault Hit! Serving from Permanent Memory.");
-        setResults(vaultHits);
-        setStatus("success");
-        return;
+      // 1. Priority 1: Search the Knowledge Vault (Zero Cost) ONLY if not Deep Research
+      if (!isDeepResearch) {
+        const { vaultPrioritySearch } = await import("@/lib/aiService");
+        const vaultHits = await vaultPrioritySearch(query);
+        
+        if (vaultHits.length > 0) {
+          console.log("[RADAR] Vault Hit! Serving from Permanent Memory.");
+          setResults(vaultHits);
+          setStatus("success");
+          return;
+        }
       }
 
       // 2. Priority 2: Backend Search / AI Generation
       const response = await fetch("http://localhost:8000/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query, deep_research: isDeepResearch }),
       });
       
       if (!response.ok) {
@@ -203,6 +206,15 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
             {status === "searching" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Go"}
           </button>
         </div>
+        <div className="flex justify-center mt-3 gap-2">
+            <button 
+              type="button" 
+              onClick={() => setIsDeepResearch(!isDeepResearch)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-bold uppercase tracking-widest transition-colors ${isDeepResearch ? 'border-amber-500 text-amber-500 bg-amber-500/10' : 'border-white/10 text-zinc-500 hover:text-white hover:border-white/20'}`}>
+              <span className="material-symbols-outlined text-[14px]">local_fire_department</span>
+              Deep Research
+            </button>
+        </div>
       </form>
 
       {/* Mobile Thumb-Access Search (Fixed Bottom) */}
@@ -225,6 +237,14 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
               </button>
            </div>
         </form>
+        <div className="flex justify-center mt-2 gap-2">
+            <button 
+              type="button" 
+              onClick={() => setIsDeepResearch(!isDeepResearch)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-bold uppercase tracking-widest transition-colors ${isDeepResearch ? 'border-amber-500 text-amber-500 bg-amber-500/10 backdrop-blur-md' : 'border-white/10 text-zinc-500 bg-[#0a0a15]/90 backdrop-blur-md'}`}>
+               Deep Research
+            </button>
+        </div>
       </div>
 
       <div className="space-y-10 pb-20">

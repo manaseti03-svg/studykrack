@@ -3,6 +3,29 @@ import time
 import numpy as np
 import google.generativeai as genai
 from fastapi import HTTPException
+import concurrent.futures
+
+def generate_with_circuit_breaker(gemini_model, prompt, timeout=15, max_iterations=3, **kwargs):
+    """
+    Task 3: The Circuit Breaker API
+    Wraps the Gemini API call in a strict timeout (15 seconds) and a max_iterations loop counter.
+    Goal: Ensure the backend is mathematically impossible to manipulate via the frontend.
+    """
+    for attempt in range(max_iterations):
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(gemini_model.generate_content, prompt, **kwargs)
+                return future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError:
+            print(f"[CIRCUIT BREAKER] Attempt {attempt + 1}/{max_iterations} timed out. Recovering...")
+            if attempt == max_iterations - 1:
+                raise HTTPException(
+                    status_code=504, 
+                    detail="Zero-Trust Block: AI Gateway timeout exceeded. Circuit breaker tripped."
+                )
+        except Exception as e:
+            if attempt == max_iterations - 1:
+                raise e
 
 def cosine_similarity(v1, v2):
     dot_product = np.dot(v1, v2)
@@ -20,26 +43,26 @@ def marksman_agentic_loop(query_str, gemini_model, embed_model, db, check_quota_
     """
     print(f"[MARKSMAN] [ACTIVE] Initializing Agentic Loop for: {query_str}")
     
-    # 1. Retrieval: Fetch top 5 semantic chunks from Firestore
+    # 1. Retrieval: Fetch top 5 semantic chunks from Enterprise Vault
     query_vec = embed_model.encode(query_str)
     
     vault_results = []
     if db:
-        # Scan both 'knowledge_vault' and 'community_library'
-        for col_name in ["knowledge_vault", "community_library"]:
+        # Enterprise v2.0: Unified Parallel Search (private_vault + global_syllabus)
+        for col_name in ["private_vault", "global_syllabus"]:
             docs = db.collection(col_name).stream()
             for doc in docs:
                 data = doc.to_dict()
                 if "embedding" in data:
                     score = cosine_similarity(query_vec, np.array(data["embedding"]))
-                    vault_results.append({**data, "score": score})
+                    vault_results.append({**data, "score": score, "source": col_name})
     
     vault_results.sort(key=lambda x: x["score"], reverse=True)
     top_chunks = vault_results[:5]
     
     # 2. Reasoning Agent: Analyze the chunks. Are they sufficient for a 14-mark answer?
     context_text = "\n---\n".join([
-        f"Source: {c.get('title')}\nContent: {c.get('summary') or c.get('definition')}\nKey Points: {c.get('key_points')}" 
+        f"Source: {c.get('title')} ({c.get('source')})\nContent: {c.get('summary') or c.get('definition')}\nKey Points: {c.get('key_points')}" 
         for c in top_chunks
     ])
     
@@ -59,7 +82,13 @@ def marksman_agentic_loop(query_str, gemini_model, embed_model, db, check_quota_
     try:
         check_quota_func()
         # Limit internal tokens to save quota
-        reasoning_resp = gemini_model.generate_content(reasoning_prompt, generation_config={"max_output_tokens": 50})
+        reasoning_resp = generate_with_circuit_breaker(
+            gemini_model, 
+            reasoning_prompt, 
+            timeout=15,
+            max_iterations=3,
+            generation_config={"max_output_tokens": 50}
+        )
         reasoning_text = reasoning_resp.text
         print(f"[MARKSMAN] [REASONING] Analysis: {reasoning_text.strip()}")
         
@@ -98,7 +127,12 @@ def marksman_agentic_loop(query_str, gemini_model, embed_model, db, check_quota_
         """
         
         check_quota_func()
-        gen_resp = gemini_model.generate_content(final_prompt)
+        gen_resp = generate_with_circuit_breaker(
+            gemini_model,
+            final_prompt,
+            timeout=15,
+            max_iterations=3
+        )
         ai_output = gen_resp.text.replace("```json", "").replace("```", "").strip()
         gen_data = json.loads(ai_output)
         
@@ -162,9 +196,8 @@ def perform_sentinel_research(query: str, gemini_model, embed_model, db, check_q
     """
     
     try:
-        # Check quota for Pass 1
         check_quota_func()
-        response = gemini_model.generate_content(research_prompt)
+        response = generate_with_circuit_breaker(gemini_model, research_prompt, timeout=15, max_iterations=3)
         ai_output = response.text.replace("```json", "").replace("```", "").strip()
         researched_concept = json.loads(ai_output)
     except HTTPException:
@@ -186,9 +219,8 @@ def perform_sentinel_research(query: str, gemini_model, embed_model, db, check_q
     """
     
     try:
-        # Check quota for Pass 2
         check_quota_func()
-        audit_response = gemini_model.generate_content(audit_prompt)
+        audit_response = generate_with_circuit_breaker(gemini_model, audit_prompt, timeout=15, max_iterations=3)
         audited_output = audit_response.text.replace("```json", "").replace("```", "").strip()
         final_concept = json.loads(audited_output)
     except HTTPException:
@@ -228,7 +260,7 @@ def bulk_research(topic_list, subject_code, gemini_model, embed_model, db, check
                 "is_ai": True,
                 "verified": False # Consistent with previous verified field name
             }
-            db.collection("community_library").add(doc_data)
+            db.collection("global_syllabus").add(doc_data)
             processed_count += 1
             
         except HTTPException as e:

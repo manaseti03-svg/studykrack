@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, where } from "firebase/firestore";
 
 export default function Library() {
   const [nodes, setNodes] = useState<any[]>([]);

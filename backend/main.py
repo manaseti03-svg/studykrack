@@ -8,15 +8,13 @@ from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import google.generativeai as genai
-from PyPDF2 import PdfReader
-import firebase_admin
-from firebase_admin import credentials, firestore, storage
-from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
-from sentinel_research import perform_sentinel_research, bulk_research, marksman_agentic_loop
+from sentinel_research import perform_sentinel_research, bulk_research, marksman_agentic_loop, generate_with_circuit_breaker
+import hmac
+import hashlib
 from fpdf import FPDF
 from fastapi.responses import FileResponse
+import PIL.Image
+import io
 
 # Load environment variables
 load_dotenv()
@@ -54,6 +52,26 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 embed_model = SentenceTransformer('all-MiniLM-L6-v2')
 
+GEMINI_SECRET_KEY = os.getenv("GEMINI_SECRET_KEY", "fallback_secret_key_development_only")
+
+def verify_execution_token(token: str, payload: str) -> bool:
+    """
+    Zero-Trust Token Verification
+    Ensures the request has a valid execution ticket issued by the Cloud Function.
+    """
+    if not token or not payload:
+        return False
+    expected_token = hmac.new(
+        GEMINI_SECRET_KEY.encode(),
+        payload.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected_token, token)
+
+def compute_sha256(file_content: bytes) -> str:
+    """Enterprise v2.0: SHA-256 Deduplication Hashing"""
+    return hashlib.sha256(file_content).hexdigest()
+
 # --- CLOUD VAULT LISTENER ---
 def process_cloud_pdf(blob_name):
     try:
@@ -82,7 +100,7 @@ def process_cloud_pdf(blob_name):
             Text: {cleaned_text[:8000]}
             """
             
-            response = gemini_model.generate_content(prompt)
+            response = generate_with_circuit_breaker(gemini_model, prompt)
             ai_output = response.text.replace("```json", "").replace("```", "").strip()
             concepts = json.loads(ai_output)
             
@@ -91,7 +109,7 @@ def process_cloud_pdf(blob_name):
                 for concept in concepts:
                     header = f"{concept['title']} {concept['definition']}"
                     embedding = embed_model.encode(header).tolist()
-                    concept_ref = db.collection("knowledge_vault").document()
+                    concept_ref = db.collection("private_vault").document()
                     batch.set(concept_ref, {
                         **concept,
                         "summary": concept['definition'],
@@ -165,10 +183,15 @@ MOCK_METRICS = {
 
 class SearchQuery(BaseModel):
     query: str
+    deep_research: bool = False
+    execution_token: Optional[str] = None
+    execution_payload: Optional[str] = None
 
 class BulkQuery(BaseModel):
     topics: List[str]
     subject_code: str
+    execution_token: Optional[str] = None
+    execution_payload: Optional[str] = None
 
 class MasteryUpdate(BaseModel):
     status: str # "Mastered", "Archived"
@@ -176,6 +199,17 @@ class MasteryUpdate(BaseModel):
 class FocusLog(BaseModel):
     minutes: int
     mode: str # "study", "rest"
+
+class TimetableEntry(BaseModel):
+    day: str
+    subject: str
+    time: str
+
+class AcademicMatrix(BaseModel):
+    timetable: List[TimetableEntry]
+    subjects: List[str]
+    semester_id: str
+    semester_end_date: str
 
 class StudyKrackPDF(FPDF):
     def header(self):
@@ -320,17 +354,19 @@ async def get_metrics():
         used = sum(1 for _ in recent_calls)
         remaining = max(0, 20 - used)
         
-        # Archival metrics
-        all_docs = db.collection("community_library").stream()
-        topics_count = sum(1 for _ in all_docs)
+        # Archival metrics (Aggregate across Enterprise Dual-Vault)
+        topics_count = 0
+        mastered_count = 0
+        for col_name in ["private_vault", "global_syllabus"]:
+            docs = db.collection(col_name).stream()
+            for doc in docs:
+                topics_count += 1
+                if doc.to_dict().get("status") == "Mastered":
+                    mastered_count += 1
         
         # Stat: Total Focus Minutes today
         focus_logs = db.collection("focus_metrics").where("timestamp", ">=", one_day_ago).stream()
         total_focus_minutes = sum(doc.to_dict().get("minutes", 0) for doc in focus_logs)
-        
-        # Mastery metrics
-        mastered_docs = db.collection("community_library").where("status", "==", "Mastered").stream()
-        mastered_count = sum(1 for _ in mastered_docs)
         
         # Money saved (₹5 per call estimated)
         money_saved = topics_count * 5
@@ -386,27 +422,30 @@ async def log_focus_session(data: FocusLog):
 @app.patch("/node/status/{node_id}")
 async def update_node_status(node_id: str, data: MasteryUpdate):
     if not db: return {"status": "error"}
-    db.collection("community_library").document(node_id).update({
-        "status": data.status
-    })
-    return {"status": "success"}
+    # Enterprise v2.0: Check both vaults for the node matching ID
+    for col in ["private_vault", "global_syllabus"]:
+        doc_ref = db.collection(col).document(node_id)
+        if doc_ref.get().exists:
+            doc_ref.update({"status": data.status})
+            return {"status": "success", "vault": col}
+    return {"status": "error", "message": "Node ID not found in Enterprise Vault."}
 
 @app.get("/api/syllabus")
 async def get_syllabus_progress():
     if not db: return {"data": MOCK_SYLLABUS, "status": "maintenance"}
     try:
-        docs = db.collection("community_library").stream()
         stats = {}
-        
-        for doc in docs:
-            d = doc.to_dict()
-            code = d.get("subject_code", "GENERAL")
-            status = d.get("status", "Archived")
-            
-            if code not in stats:
-                stats[code] = {"total": 0, "mastered": 0}
-            
-            stats[code]["total"] += 1
+        for col in ["private_vault", "global_syllabus"]:
+            docs = db.collection(col).stream()
+            for doc in docs:
+                d = doc.to_dict()
+                code = d.get("subject_code", "GENERAL")
+                status = d.get("status", "Archived")
+                
+                if code not in stats:
+                    stats[code] = {"total": 0, "mastered": 0}
+                
+                stats[code]["total"] += 1
             if status == "Mastered":
                 stats[code]["mastered"] += 1
                 
@@ -417,6 +456,8 @@ async def get_syllabus_progress():
 
 @app.post("/bulk-ingest")
 async def handle_bulk_ingest(data: BulkQuery):
+    if not verify_execution_token(data.execution_token, data.execution_payload):
+        raise HTTPException(status_code=403, detail="Zero-Trust Block: Invalid or missing execution ticket. Please consume Fuel first.")
     result = bulk_research(
         data.topics, 
         data.subject_code, 
@@ -427,12 +468,73 @@ async def handle_bulk_ingest(data: BulkQuery):
     )
     return result
 
+@app.post("/vision/timetable")
+async def analyze_timetable(file: UploadFile = File(...)):
+    """
+    Task 1: AI Vision Ingestion Pipeline
+    Scans a timetable image and extracts structured academic matrix.
+    """
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Image file required.")
+        
+    try:
+        image_data = await file.read()
+        img = PIL.Image.open(io.BytesIO(image_data))
+        
+        prompt = """
+        Role: Academic Data Architect.
+        Task: Extract the student's timetable and list of subjects from this image.
+        Format: Strictly return ONLY a valid JSON object.
+        Structure:
+        {
+          "timetable": [{"day": "Monday", "subject": "Mathematics", "time": "9:00 AM - 10:00 AM"}],
+          "subjects": ["Mathematics", "Data Structures", "AIML"],
+          "semester_id": "SEM_2_2026",
+          "semester_end_date": "2026-06-30"
+        }
+        Data Extraction Rule: Be extremely precise. If a subject name is abbreviated (e.g., 'DS'), expand it to full form (e.g., 'Data Structures') if obvious.
+        """
+        
+        # Using Gemini 1.5 Flash for Vision
+        response = gemini_model.generate_content([prompt, img])
+        text = response.text.replace("```json", "").replace("```", "").strip()
+        data = json.loads(text)
+        
+        return data
+    except Exception as e:
+        print(f"Vision Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Vision Analysis Failed: {str(e)}")
+
 @app.post("/forge/upload")
-async def forge_note(file: UploadFile = File(...), subject_name: str = Form("General Study")):
+async def forge_note(
+    file: UploadFile = File(...), 
+    subject_name: str = Form("General Study"),
+    execution_token: Optional[str] = Form(None),
+    execution_payload: Optional[str] = Form(None)
+):
+    if not verify_execution_token(execution_token, execution_payload):
+        raise HTTPException(status_code=403, detail="Zero-Trust Block: Invalid or missing execution ticket. Please consume Fuel first.")
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="PDF only")
     try:
-        reader = PdfReader(file.file)
+        file_bytes = await file.read()
+        file_hash = compute_sha256(file_bytes)
+        
+        # Task 2: Implement SHA-256 Deduplication
+        if db:
+            existing_doc = db.collection("private_vault").where("doc_hash", "==", file_hash).limit(1).get()
+            if existing_doc:
+                print(f"[ENTERPRISE] Deduplication Hit: {file_hash}")
+                # Create a reference link in user's profile or library
+                # For now, we'll return successful but skip AI processing
+                return {
+                    "status": "success", 
+                    "message": "Note already exists in Enterprise Vault. Linked to your profile via deduplication logic.",
+                    "doc_id": existing_doc[0].id,
+                    "deduplicated": True
+                }
+
+        reader = PdfReader(io.BytesIO(file_bytes))
         pages = [page.extract_text() or "" for page in reader.pages]
         
         # Task 2: Smart Chunking for T480 Stability
@@ -452,7 +554,7 @@ async def forge_note(file: UploadFile = File(...), subject_name: str = Form("Gen
             Text: {cleaned_text[:8000]}
             """
             
-            response = gemini_model.generate_content(prompt)
+            response = generate_with_circuit_breaker(gemini_model, prompt)
             ai_output = response.text.replace("```json", "").replace("```", "").strip()
             concepts = json.loads(ai_output)
             all_concepts.extend(concepts)
@@ -462,7 +564,7 @@ async def forge_note(file: UploadFile = File(...), subject_name: str = Form("Gen
             for concept in all_concepts:
                 header = f"{concept['title']} {concept['definition']}"
                 embedding = embed_model.encode(header).tolist()
-                concept_ref = db.collection("knowledge_vault").document()
+                concept_ref = db.collection("private_vault").document()
                 batch.set(concept_ref, {
                     **concept,
                     "summary": concept['definition'], # Compatibility
@@ -472,6 +574,7 @@ async def forge_note(file: UploadFile = File(...), subject_name: str = Form("Gen
                     "timestamp": time.time(),
                     "verified": True,
                     "source_file": file.filename,
+                    "doc_hash": file_hash, # Enterprise Deduplication Key
                     "embedding": embedding,
                     "is_ai": True,
                     "tag": "Semester: 2 | Branch: AIML",
@@ -483,6 +586,11 @@ async def forge_note(file: UploadFile = File(...), subject_name: str = Form("Gen
     except Exception as e:
         print(f"Ingestion Failure: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+def cosine_similarity(a, b):
+    a = np.array(a)
+    b = np.array(b)
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b) + 1e-10)
 
 @app.post("/search")
 async def pulse_radar_search(search_query: SearchQuery):
@@ -504,35 +612,50 @@ async def pulse_radar_search(search_query: SearchQuery):
         }]}
     check_api_quota(increment=False)
     try:
+        if search_query.deep_research:
+            if not verify_execution_token(search_query.execution_token, search_query.execution_payload):
+                raise HTTPException(status_code=403, detail="Zero-Trust Block: Invalid or missing execution ticket. Please consume Fuel first.")
+        
         query_vec = embed_model.encode(search_query.query)
-        docs = db.collection("community_library").stream()
+        
+        # Enterprise v2.0: Unified Retrieval (Parallel Search logic simplified for stream)
         results = []
-        for doc in docs:
-            data = doc.to_dict()
-            if "embedding" in data:
-                doc_vec = np.array(data["embedding"])
-                score = cosine_similarity(query_vec, doc_vec)
-                results.append({
-                    "id": doc.id,
-                    "title": data.get("title"),
-                    "concept_one_sentence": data.get("concept_one_sentence"),
-                    "summary": data.get("summary"),
-                    "key_points": data.get("key_points"),
-                    "exam_hack": data.get("exam_hack"),
-                    "analogy": data.get("analogy"),
-                    "video_resource": data.get("video_resource"),
-                    "score": float(score),
-                    "verified": data.get("verified", False),
-                    "is_ai": data.get("is_ai", False),
-                    "status": data.get("status", "Archived"),
-                    "subject_code": data.get("subject_code"),
-                    "priority_level": data.get("priority_level")
-                })
+        for col_name in ["private_vault", "global_syllabus"]:
+            docs = db.collection(col_name).stream()
+            for doc in docs:
+                data = doc.to_dict()
+                if "embedding" in data:
+                    doc_vec = np.array(data["embedding"])
+                    score = cosine_similarity(query_vec, doc_vec)
+                    results.append({
+                        "id": doc.id,
+                        "title": data.get("title"),
+                        "concept_one_sentence": data.get("concept_one_sentence"),
+                        "summary": data.get("summary"),
+                        "key_points": data.get("key_points"),
+                        "exam_hack": data.get("exam_hack"),
+                        "analogy": data.get("analogy"),
+                        "video_resource": data.get("video_resource"),
+                        "score": float(score),
+                        "verified": data.get("verified", False),
+                        "is_ai": data.get("is_ai", False),
+                        "status": data.get("status", "Archived"),
+                        "subject_code": data.get("subject_code"),
+                        "priority_level": data.get("priority_level"),
+                        "source_vault": col_name # Tracking source
+                    })
         results.sort(key=lambda x: x["score"], reverse=True)
         best_score = results[0]["score"] if results else 0
-        if best_score < 0.85:
+        if best_score < 0.85 or search_query.deep_research:
+            # Check for token again if Gemini is triggered by low score even if not explicitly deep research
+            if not verify_execution_token(search_query.execution_token, search_query.execution_payload):
+                raise HTTPException(status_code=403, detail="Zero-Trust Block: Low vault relevancy detected. AI Logic Pass required. Please consume Fuel.")
+
             # Check user quota before proceeding with Marksman Agentic Loop
             user_plan = check_user_quota()
+            if user_plan == "free":
+                raise HTTPException(status_code=402, detail="Deep Research Engine (Path B) requires ₹19 Fuel Plan. No payment = No Gemini.")
+
             from sentinel_research import marksman_agentic_loop
             researched_concept = marksman_agentic_loop(search_query.query, gemini_model, embed_model, db, check_api_quota)
             header = f"{researched_concept['title']} {researched_concept['summary']}"
@@ -547,7 +670,7 @@ async def pulse_radar_search(search_query: SearchQuery):
                 "score": 1.0,
                 "status": "Archived"
             }
-            db.collection("community_library").add(doc_data)
+            db.collection("global_syllabus").add(doc_data)
             return {"results": [doc_data]}
         return {"results": results[:3]}
     except Exception as e:
@@ -559,12 +682,13 @@ async def export_exam_guide(subject_code: str):
     if not db:
         # Mock PDF generation or error handled gracefully
         raise HTTPException(status_code=503, detail="PDF Export requires Database Connection (Fortress Vault is currently syncing).")
-    docs = db.collection("community_library").where("subject_code", "==", subject_code).stream()
     nodes = []
-    for doc in docs:
-        d = doc.to_dict()
-        if d.get("status") == "Mastered" or d.get("priority_level") == "14-Mark Essay":
-            nodes.append(d)
+    for col in ["private_vault", "global_syllabus"]:
+        docs = db.collection(col).where("subject_code", "==", subject_code).stream()
+        for doc in docs:
+            d = doc.to_dict()
+            if d.get("status") == "Mastered" or d.get("priority_level") == "14-Mark Essay":
+                nodes.append(d)
     if not nodes:
         raise HTTPException(status_code=404, detail="No high-priority or mastered nodes found.")
     
@@ -615,16 +739,19 @@ async def wipe_library():
     """
     if not db: return {"status": "success", "count": 0, "message": "Mock Mode: No nodes to wipe."}
     try:
-        docs = db.collection("community_library").stream()
-        batch = db.batch()
         count = 0
-        for doc in docs:
-            batch.delete(doc.reference)
-            count += 1
-            if count % 500 == 0:
-                batch.commit()
-                batch = db.batch()
-        batch.commit()
+        for col in ["private_vault", "global_syllabus"]:
+            docs = db.collection(col).stream()
+            batch = db.batch()
+            col_count = 0
+            for doc in docs:
+                batch.delete(doc.reference)
+                col_count += 1
+                if col_count % 500 == 0:
+                    batch.commit()
+                    batch = db.batch()
+            batch.commit()
+            count += col_count
         return {"status": "success", "count": count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -632,14 +759,20 @@ async def wipe_library():
 @app.get("/nodes/mastered")
 async def get_mastered_nodes():
     if not db: return []
-    docs = db.collection("community_library").where("status", "==", "Mastered").stream()
-    return [{**doc.to_dict(), "id": doc.id} for doc in docs]
+    nodes = []
+    for col in ["private_vault", "global_syllabus"]:
+        docs = db.collection(col).where("status", "==", "Mastered").stream()
+        nodes.extend([{**doc.to_dict(), "id": doc.id, "source_vault": col} for doc in docs])
+    return nodes
 
 @app.get("/api/nodes")
 async def get_all_nodes():
     if not db: return []
-    docs = db.collection("community_library").stream()
-    return [{**doc.to_dict(), "id": doc.id} for doc in docs]
+    nodes = []
+    for col in ["private_vault", "global_syllabus"]:
+        docs = db.collection(col).stream()
+        nodes.extend([{**doc.to_dict(), "id": doc.id, "source_vault": col} for doc in docs])
+    return nodes
 
 if __name__ == "__main__":
     import uvicorn

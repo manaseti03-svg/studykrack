@@ -1,117 +1,174 @@
 "use client"
-import { useState, useEffect } from "react";
-import { Sparkles, Terminal, Upload, Loader2 } from "lucide-react";
-import SearchRadar from "@/components/SearchRadar";
-import Link from "next/link";
+import Link from 'next/link';
+import SentinelLogo from '@/components/SentinelLogo';
 
-export default function Home() {
-  const [file, setFile] = useState<File | null>(null);
-  const [subject, setSubject] = useState("General Study");
-  const [forgeStatus, setForgeStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
-  const [health, setHealth] = useState<any>(null);
-
-  useEffect(() => {
-    fetch("http://localhost:8000/health")
-      .then(res => res.json())
-      .then(data => setHealth(data))
-      .catch(() => setHealth({ status: "offline" }));
-  }, []);
-
-  const handleForge = async () => {
-    if (!file) return;
-    setForgeStatus("uploading");
-    
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("subject_name", subject);
-
-    try {
-      const response = await fetch("http://localhost:8000/forge/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        setForgeStatus("success");
-        setFile(null);
-      } else {
-        setForgeStatus("error");
-      }
-    } catch (err) {
-      console.error(err);
-      setForgeStatus("error");
-    }
-  };
-
+export default function LandingPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center p-12 bg-[#05050a] text-white overflow-x-hidden">
-      {/* Dynamic Background */}
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,_#1e1e3f_0%,_#05050a_70%)] opacity-40 pointer-events-none"></div>
-
-      <div className="z-10 w-full max-w-4xl flex flex-col items-center">
-        
-        {/* Navigation / Header */}
-        <div className="w-full flex justify-between items-center mb-16">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-cyan-500 rounded-lg flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.5)]">
-               <Sparkles className="text-black w-6 h-6" />
-            </div>
-            <h1 className="text-3xl font-black tracking-tighter uppercase italic">
-              STUDY<span className="text-cyan-400">KRACK</span>
-            </h1>
-          </div>
-          <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="text-[10px] font-black tracking-widest bg-cyan-600/10 text-cyan-400 border border-cyan-500/20 px-4 py-2 rounded-xl hover:bg-cyan-600 hover:text-black transition-all">
-              GO TO DASHBOARD
-            </Link>
-            <div className={`text-[10px] font-mono px-3 py-1 rounded-full border ${health?.status?.includes('healthy') ? 'border-cyan-500/30 text-cyan-400' : 'border-red-500/30 text-red-400'}`}>
-              SYSTEM STATUS: {health?.status?.toUpperCase() || "OFFLINE"}
-            </div>
-          </div>
-        </div>
-
-        {/* Pulse Radar Component */}
-        <div className="w-full mb-24">
-           <div className="text-center mb-10">
-              <h2 className="text-5xl font-black mb-4 tracking-tight">The Pulse Radar.</h2>
-              <p className="text-zinc-500 font-medium uppercase text-xs tracking-[0.5em]">Day 3: Semantic Discovery Engine</p>
-           </div>
-           <SearchRadar />
-        </div>
-
-        {/* Note Forge (Day 2 Component) */}
-        <div className="w-full max-w-2xl pt-12 border-t border-white/5">
-            <div className="p-8 border border-white/5 bg-white/[0.01] rounded-3xl backdrop-blur-3xl">
-              <h2 className="text-xs font-black uppercase tracking-[0.3em] mb-8 text-zinc-600 flex items-center">
-                <Terminal className="w-4 h-4 mr-2" /> Study Upload
-              </h2>
-              <div className="flex items-center space-x-4">
-                <input 
-                  type="text" 
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-cyan-500/30 text-sm"
-                  placeholder="Subject..."
-                />
-                <div className="relative">
-                  <input type="file" accept=".pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" />
-                  <button className={`px-4 py-3 rounded-xl border border-dashed transition-all font-bold text-[10px] ${file ? 'border-cyan-500 text-cyan-400 bg-cyan-500/10' : 'border-zinc-700 text-zinc-500'}`}>
-                    {file ? "FILE LOADED" : "ADD PDF"}
-                  </button>
-                </div>
-                <button 
-                  onClick={handleForge}
-                  disabled={!file || forgeStatus === 'uploading'}
-                  className="bg-white text-black font-black px-8 py-3 rounded-xl hover:bg-cyan-400 transition-colors disabled:opacity-50 text-[10px] uppercase shadow-xl"
-                >
-                  {forgeStatus === 'uploading' ? <Loader2 className="w-4 h-4 animate-spin" /> : "Forge"}
-                </button>
-              </div>
-              {forgeStatus === "success" && <p className="mt-4 text-[10px] text-cyan-400 font-bold animate-pulse">NOTE INFUSED INTO LIBRARY.</p>}
-            </div>
-        </div>
-
+    <main className="min-h-screen bg-[#050505] selection:bg-cyan-500/30 overflow-x-hidden">
+      {/* Background Neural Blurs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-cyan-900/10 blur-[150px] rounded-full"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-amber-900/10 blur-[150px] rounded-full"></div>
       </div>
+
+      {/* Header */}
+      <nav className="fixed top-0 w-full z-50 px-6 py-4 flex justify-between items-center bg-black/5 backdrop-blur-md border-b border-white/5">
+        <div className="flex items-center gap-2">
+          <SentinelLogo className="w-8 h-8" />
+          <span className="font-headline font-black text-xs uppercase tracking-widest text-white italic">StudyKrack v2.0</span>
+        </div>
+        <Link href="/auth" className="px-5 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-white/10 transition-all">
+          Identity Login
+        </Link>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-20 px-6 flex flex-col items-center text-center">
+        <div className="animate-[fade-in-up_1s_ease-out]">
+          <SentinelLogo className="w-24 h-24 mb-10" />
+          <h1 className="text-6xl md:text-8xl font-headline font-black tracking-tighter text-white mb-6">
+            BTech Code. <span className="bg-gradient-to-r from-cyan-400 to-amber-500 bg-clip-text text-transparent italic">Cracked.</span>
+          </h1>
+          <p className="max-w-2xl mx-auto text-lg md:text-xl text-zinc-400 font-medium leading-relaxed mb-12">
+            TOOLS is for reading. <span className="text-white font-bold">StudyKrack is for Winning.</span> <br/>
+            Engineered to take you from a <span className="text-red-400/80 italic">7.27</span> to a dominant <span className="text-cyan-400 font-black">8.5+ SGPA</span>.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/auth" className="px-10 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-cyan-600 text-black font-black uppercase tracking-widest text-xs shadow-[0_20px_40px_rgba(6,182,212,0.3)] hover:scale-105 active:scale-95 transition-all">
+              Initiate Sentinel Access
+            </Link>
+            <button className="px-10 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold uppercase tracking-widest text-xs hover:bg-white/10 transition-all">
+              Watch Deployment
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Comparison: Marksman Engine */}
+      <section className="py-24 px-6 max-w-6xl mx-auto">
+        <div className="text-center mb-16">
+          <span className="text-cyan-500 font-label font-bold uppercase tracking-[0.4em] text-[10px]">The Marksman Advantage</span>
+          <h2 className="text-3xl font-headline font-bold text-white mt-2 italic">Standard AI vs StudyKrack Engine</h2>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Standard AI Card */}
+          <div className="bg-white/5 rounded-3xl p-8 border border-white/5 opacity-60">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="material-symbols-outlined text-zinc-500">robot_2</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">General Purpose Chatbot</span>
+            </div>
+            <div className="space-y-4">
+              <div className="h-4 w-3/4 bg-white/10 rounded-full"></div>
+              <div className="h-4 w-full bg-white/10 rounded-full"></div>
+              <div className="h-4 w-5/6 bg-white/10 rounded-full"></div>
+              <div className="h-24 w-full bg-white/5 rounded-2xl flex items-center justify-center italic text-zinc-600 text-xs text-center px-4">
+                "Here is some information about your topic in long paragraphs that you'll likely forget during the exam..."
+              </div>
+            </div>
+          </div>
+
+          {/* StudyKrack Marksman Card */}
+          <div className="bg-[#0a0a15] rounded-3xl p-8 border border-cyan-500/20 shadow-[0_20px_80px_rgba(6,182,212,0.1)] relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4">
+               <span className="bg-cyan-500 text-[8px] font-black uppercase px-3 py-1 rounded-full text-black">Active Guard</span>
+            </div>
+            <div className="flex items-center gap-3 mb-6">
+              <SentinelLogo className="w-6 h-6" />
+              <span className="text-xs font-bold uppercase tracking-widest text-cyan-500">Marksman Engine v2.0</span>
+            </div>
+            <div className="space-y-6">
+              <div className="p-4 bg-cyan-950/20 rounded-xl border border-cyan-500/20">
+                <p className="text-[10px] font-black text-cyan-400 mb-2 uppercase italic tracking-tighter">14-Mark Logic Protocol</p>
+                <ul className="space-y-2 text-[11px] text-zinc-300 font-medium">
+                  <li className="flex items-center gap-2"><span className="text-cyan-500">01</span> Definition & Historical Context (2 Marks)</li>
+                  <li className="flex items-center gap-2"><span className="text-cyan-500">02</span> Technical Proofs & Proof Logic (6 Marks)</li>
+                  <li className="flex items-center gap-2"><span className="text-cyan-500">03</span> Marksman Diagram Construction (3 Marks)</li>
+                  <li className="flex items-center gap-2"><span className="text-cyan-500">04</span> Industrial Application (3 Marks)</li>
+                </ul>
+              </div>
+              <div className="h-10 w-full bg-cyan-500/10 rounded-xl border border-dashed border-cyan-500/20 flex items-center justify-center">
+                 <span className="text-[9px] font-label font-bold text-cyan-500/60 uppercase tracking-widest italic">Target: 8.5+ SGPA Calibration Active</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Logic Vault Showcase */}
+      <section className="py-24 bg-white/5">
+        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
+          <div>
+            <span className="text-amber-500 font-label font-bold uppercase tracking-[0.4em] text-[10px]">Zero Waste Architecture</span>
+            <h2 className="text-4xl font-headline font-bold text-white mt-4 mb-6 italic">Upload Once. <br/>Use Forever.</h2>
+            <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
+              Our <span className="text-white font-bold">SHA-256 Deduplication</span> ensures every PDF you upload becomes a permanent neural node in your vault. 
+              <br/><br/>
+              If a friend uploads the same syllabus, StudyKrack identifies the duplicate hash instantly. <span className="text-amber-500">0 API waste. Instant RAG retrieval.</span>
+            </p>
+            <div className="p-6 bg-black rounded-2xl border border-white/5 flex gap-6 items-center">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                <span className="material-symbols-outlined text-amber-500">security</span>
+              </div>
+              <div>
+                <p className="text-white font-bold leading-none">Logic Vault Protection</p>
+                <p className="text-xs text-zinc-500 mt-1 uppercase tracking-widest">Enterprise Guard v2.0</p>
+              </div>
+            </div>
+          </div>
+          <div className="relative group">
+             <div className="absolute inset-0 bg-amber-500/20 blur-[100px] opacity-20"></div>
+             <div className="relative bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[40px] p-10 aspect-square flex flex-col items-center justify-center">
+                <div className="w-full h-1 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent mb-8"></div>
+                <div className="grid grid-cols-3 gap-4 w-full">
+                   {[...Array(9)].map((_, i) => (
+                     <div key={i} className="aspect-square rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                        <span className="text-[8px] text-zinc-700 font-mono tracking-tighter">HASH_{i*235}</span>
+                     </div>
+                   ))}
+                </div>
+             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing / Fuel Section */}
+      <section className="py-32 px-6 flex flex-col items-center">
+        <div className="max-w-lg w-full bg-gradient-to-b from-[#0a0a15] to-black rounded-[40px] p-12 border border-white/10 text-center relative overflow-hidden group">
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent"></div>
+          
+          <div className="mb-8 p-4 inline-block bg-cyan-500/10 rounded-2xl border border-cyan-500/20">
+             <span className="text-3xl">🥟</span>
+          </div>
+
+          <h2 className="text-2xl font-headline font-bold text-white mb-2">₹19 Fuel Plan</h2>
+          <p className="text-zinc-500 text-sm mb-10 font-medium">Clear pricing. No hidden cloud debt.</p>
+
+          <div className="text-center mb-10">
+            <span className="text-6xl font-headline font-black text-white">₹19</span>
+            <span className="text-zinc-500 uppercase font-bold text-xs tracking-widest ml-2">/ 20 Power Ingestions</span>
+          </div>
+
+          <div className="bg-white/5 rounded-2xl p-6 border border-white/5 mb-10 text-left">
+            <p className="text-[9px] font-label font-bold text-zinc-500 uppercase tracking-widest mb-4">Why ₹19?</p>
+            <p className="text-xs text-zinc-400 leading-relaxed italic">
+              "That is the cost of a single Samosa at your college canteen. Pay only when you are low on Fuel. No subscriptions. Just wins."
+            </p>
+          </div>
+
+          <Link href="/auth" className="block w-full py-4 rounded-xl bg-cyan-500 text-black font-black uppercase tracking-widest text-xs shadow-lg shadow-cyan-500/20 hover:scale-105 active:scale-95 transition-all">
+            Get Fueled Up
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-10 border-t border-white/5 text-center px-6">
+        <p className="text-[8px] font-label text-zinc-600 font-bold uppercase tracking-[0.6em]">
+          Designed by Muni Manas | AIML Semester 2 | Under Logic Guard Protocol
+        </p>
+      </footer>
     </main>
   );
 }
