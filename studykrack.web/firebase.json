@@ -1,0 +1,19 @@
+{
+  "hosting": {
+    "source": "frontend",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "frameworksBackend": {
+      "region": "asia-southeast1"
+    }
+  },
+  "firestore": [
+    {
+      "database": "ai-studio-487504b2-b105-44c3-a3c9-aeba84bfd8ee",
+      "rules": "firestore.rules"
+    }
+  ]
+}

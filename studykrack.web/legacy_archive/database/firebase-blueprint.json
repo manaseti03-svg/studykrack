@@ -1,0 +1,44 @@
+{
+  "collections": {
+    "users": {
+      "docId": "userId",
+      "fields": {
+        "displayName": "string",
+        "email": "string",
+        "nodeDensity": "number",
+        "subjectMastery": "object (Record<string, number>)",
+        "engagementScore": "number",
+        "preferences": {
+          "theme": "string ('dark' | 'light')"
+        },
+        "lastActive": "timestamp"
+      }
+    },
+    "sessions": {
+      "docId": "sessionId",
+      "fields": {
+        "userId": "string (reference to users)",
+        "title": "string",
+        "mode": "string ('Socratic' | 'Researcher' | 'Solver')",
+        "createdAt": "timestamp",
+        "updatedAt": "timestamp"
+      },
+      "subcollections": {
+        "messages": {
+          "docId": "messageId",
+          "fields": {
+            "role": "string ('user' | 'assistant')",
+            "content": "string (Markdown + LaTeX)",
+            "thoughtProcess": "string (internal monologue)",
+            "nodesExtracted": "string[] (key concepts)",
+            "metadata": {
+              "suggestions": "string[]",
+              "confidence": "number"
+            },
+            "timestamp": "timestamp"
+          }
+        }
+      }
+    }
+  }
+}

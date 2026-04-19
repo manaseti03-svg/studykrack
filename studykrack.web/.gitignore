@@ -1,0 +1,12 @@
+node_modules/
+.next/
+venv/
+__pycache__/
+.env
+.env.local
+dist/
+build/
+.DS_Store
+*.pyc
+firebase-debug.log
+serviceAccountKey.json
