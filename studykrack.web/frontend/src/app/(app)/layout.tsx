@@ -68,8 +68,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           }
         });
 
-        // Task 2: Private Vault Listener (strictly filtered by owner_id for security rules)
-        const q = query(collection(db, "knowledge_vault"), where("owner_id", "==", user.uid));
+        // Task 2: Private Vault Listener (strictly filtered by owner_uid for security rules)
+        const q = query(collection(db, "private_vault"), where("owner_uid", "==", user.uid));
         const unsubscribeVault = onSnapshot(q, (snapshot: any) => {
           setVaultCount(snapshot.docs.length);
         });
@@ -87,7 +87,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkHub = async () => {
       try {
-        const res = await fetch("http://localhost:8000/health");
+        const res = await fetch("/api/health");
         if (!res.ok) throw new Error();
         const data = await res.json();
         setHubStatus(data.embedding_engine === "online" ? "online" : "loading");
@@ -96,8 +96,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       }
     };
 
-    const examDate = new Date();
-    examDate.setDate(examDate.getDate() + 14); 
+    // Fixed Target Exam Date to prevent the countdown from resetting on every page refresh
+    const examDate = new Date("2026-06-15T09:00:00"); 
     
     const updateCountdown = () => {
       const diff = examDate.getTime() - new Date().getTime();

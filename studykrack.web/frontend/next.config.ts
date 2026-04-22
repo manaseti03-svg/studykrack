@@ -4,13 +4,25 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/auth",
+        source: "/(auth|login|signup)",
         headers: [
           {
             key: "Cross-Origin-Opener-Policy",
             value: "same-origin-allow-popups",
           },
         ],
+      },
+    ];
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/login",
+        destination: "/auth",
+      },
+      {
+        source: "/signup",
+        destination: "/auth",
       },
     ];
   },

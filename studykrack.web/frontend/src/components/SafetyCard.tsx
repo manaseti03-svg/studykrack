@@ -1,8 +1,14 @@
 "use client"
 import { useState, useEffect } from "react";
+import { getNeuralResilienceStatus } from "@/lib/utils";
 
 export default function SafetyCard() {
-  const [metrics, setMetrics] = useState({ remaining_quota: 20, topics_archived: 0, money_saved: 0 });
+  const [metrics, setMetrics] = useState({ 
+    remaining_quota: 20, 
+    topics_archived: 0, 
+    money_saved: 0, 
+    total_focus_minutes: 0 
+  });
   const [loading, setLoading] = useState(true);
 
   /* --- LOGIC SHIELD START: DO NOT MODIFY --- */
@@ -14,7 +20,7 @@ export default function SafetyCard() {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/metrics");
+        const res = await fetch("/api/metrics");
         const data = await res.json();
         const finalMetrics = data.status === "maintenance" ? data.data : data;
         setMetrics(finalMetrics);
@@ -34,7 +40,7 @@ export default function SafetyCard() {
   const handlePurge = async () => {
     if (!confirm("ARE YOU SURE? This will permanently delete all study nodes. This action is irreversible.")) return;
     try {
-      const res = await fetch("http://localhost:8000/api/wipe", { method: "DELETE" });
+      const res = await fetch("/api/metrics", { method: "DELETE" });
       const data = await res.json();
       alert(`System Reset Complete. Purged ${data.count} nodes.`);
       setMetrics(prev => ({ ...prev, topics_archived: 0 }));
@@ -50,8 +56,15 @@ export default function SafetyCard() {
            <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>gshield</span>
            <span className="font-label text-white font-bold text-[10px] tracking-[0.2em] uppercase">Ground Control</span>
         </div>
-        <div className="px-3 py-1 bg-surface-container rounded-full text-[8px] font-label text-on-surface-variant font-bold uppercase tracking-widest border border-white/5">
-          Governor Protocol Active
+        <div className="flex flex-col items-end gap-1">
+          <div className="px-3 py-1 bg-surface-container rounded-full text-[8px] font-label text-on-surface-variant font-bold uppercase tracking-widest border border-white/5">
+            Governor Protocol Active
+          </div>
+          {metrics.total_focus_minutes > 0 && (
+            <div className={`text-[7px] font-black tracking-[0.3em] uppercase ${getNeuralResilienceStatus(metrics.total_focus_minutes).color}`}>
+              Neural Status: {getNeuralResilienceStatus(metrics.total_focus_minutes).label}
+            </div>
+          )}
         </div>
       </div>
       

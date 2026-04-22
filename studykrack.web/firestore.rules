@@ -12,46 +12,36 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == uid;
     }
 
-    // 1. Users collection locked strictly to request.auth.uid
+    // 1. Users collection: Locked strongly to the specific user
     match /users/{userId} {
       allow read, write: if isOwner(userId);
     }
     
-    // 2. Vault collections strictly locked
-    // If vault nodes have an owner_id or user_id, check it, else lock it to creation.
-    // Assuming vault documents store the creator's uid in 'owner_id' or 'userId'
-    match /knowledge_vault/{documentId} {
-      allow read, update, delete: if isAuthenticated() && resource.data.owner_id == request.auth.uid;
-      allow create: if isAuthenticated() && request.resource.data.owner_id == request.auth.uid;
-    }
-    
-    match /community_library/{documentId} {
-      // If community_library is shared but locked to creators for editing
-      allow read: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && resource.data.owner_id == request.auth.uid;
-      allow create: if isAuthenticated() && request.resource.data.owner_id == request.auth.uid;
+    // 2. Private Vault: Personal academic data
+    match /private_vault/{documentId} {
+      allow read, update, delete: if isAuthenticated() && resource.data.owner_uid == request.auth.uid;
+      // Allow creation only if the user stamps their own UID correctly
+      allow create: if isAuthenticated() && request.resource.data.owner_uid == request.auth.uid;
     }
 
-    match /knowledge_cache/{documentId} {
-      // Global shared cache for AI research results
+    // 3. Global Syllabus: Community-driven academic data (Read-Only for users)
+    match /global_syllabus/{documentId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated(); // Any authenticated user can contribute to the global cache
-      allow update, delete: if false;     // Prevent mutation of cached knowledge
+      allow write: if false; // System only
     }
 
-    // 3. public_syllabus collection is Read-Only for authenticated users
-    match /public_syllabus/{documentId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Strict Read-Only
+    // 4. System Metrics: Audit trails (No client access)
+    match /system_metrics/{documentId} {
+      allow read, write: if false;
     }
 
-    // 4. Leaderboard collection (Read-Only for display)
+    // 5. Leaderboard & Stats
     match /leaderboard/{documentId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated(); // Allow updates to their own rank in v2.1
+      allow write: if false; // Managed by backend functions
     }
     
-    // Other collections (System metrics etc allowed internally but denied externally)
+    // Catch-all: Deny everything else
     match /{document=**} {
       allow read, write: if false; 
     }

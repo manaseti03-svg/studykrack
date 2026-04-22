@@ -1,18 +1,18 @@
 import { NextResponse, NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  const session = request.cookies.get('session')?.value
+  const isLoggedIn = request.cookies.get('isLoggedIn')?.value
   const { pathname } = request.nextUrl
 
   // Protected Routes
   const isDashboard = pathname.startsWith('/dashboard')
   const isLanding = pathname === '/'
 
-  if (isDashboard && !session) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  if (isDashboard && !isLoggedIn) {
+    return NextResponse.redirect(new URL('/auth', request.url))
   }
 
-  if (isLanding && session) {
+  if (isLanding && isLoggedIn) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
@@ -20,5 +20,18 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/dashboard/:path*'],
-}
+  matcher: [
+    '/dashboard/:path*',
+    '/setup/:path*',
+    '/forge/:path*',
+    '/research/:path*',
+    '/auth',
+    '/api/search',
+    '/api/forge',
+    '/api/vision',
+    '/api/metrics',
+    '/api/syllabus',
+    '/api/token',
+    '/api/node/:path*'
+  ]
+};

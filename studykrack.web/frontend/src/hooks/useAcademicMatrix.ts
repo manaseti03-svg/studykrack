@@ -21,7 +21,7 @@ export function useAcademicMatrix() {
           const data = snap.data();
           setMatrix(data.active_semester);
           
-          if (!data.active_semester && pathname !== '/setup' && pathname !== '/auth') {
+          if (!data.active_semester && !data.setup_skipped && pathname !== '/setup' && pathname !== '/auth') {
             router.push('/setup');
           }
         } else {

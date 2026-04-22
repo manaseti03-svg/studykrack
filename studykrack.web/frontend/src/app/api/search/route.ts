@@ -1,94 +1,182 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import crypto from 'crypto';
+import { adminDb } from '@/lib/firebaseAdmin';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const embedModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
+/**
+ * Shared Helpers
+ */
 
-function cosineSimilarity(v1: number[], v2: number[]) {
-  const dotProduct = v1.reduce((sum, val, i) => sum + val * v2[i], 0);
-  const normV1 = Math.sqrt(v1.reduce((sum, val) => sum + val * val, 0));
-  const normV2 = Math.sqrt(v2.reduce((sum, val) => sum + val * val, 0));
-  if (normV1 === 0 || normV2 === 0) return 0;
-  return dotProduct / (normV1 * normV2);
+async function embedText(text: string): Promise<number[]> {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${process.env.GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'models/text-embedding-004',
+        content: { parts: [{ text }] },
+      }),
+    }
+  );
+  const data = await res.json();
+  if (!data.embedding) throw new Error('Embedding failed');
+  return data.embedding.values;
 }
+
+function cosineSim(a: number[], b: number[]): number {
+  const dot = a.reduce((s, v, i) => s + v * b[i], 0);
+  const nA = Math.sqrt(a.reduce((s, v) => s + v * v, 0));
+  const nB = Math.sqrt(b.reduce((s, v) => s + v * v, 0));
+  return dot / (nA * nB + 1e-10);
+}
+
+async function generateWithBreaker(prompt: string): Promise<string> {
+  for (let i = 0; i < 3; i++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+          signal: controller.signal,
+        }
+      );
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      return data.candidates[0].content.parts[0].text;
+    } catch (e) {
+      if (i === 2) throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw new Error('Circuit breaker tripped');
+}
+
+/**
+ * FILE 2 — frontend/app/api/search/route.ts
+ */
 
 export async function POST(req: NextRequest) {
   try {
-    const { query: searchQuery, deep_research } = await req.json();
+    const body = await req.json();
+    const uid = req.cookies.get('session')?.value || body.user_id;
+    if (!uid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!searchQuery) {
-      return NextResponse.json({ error: "Query required" }, { status: 400 });
+    const query = body.query;
+    if (!query?.trim()) {
+      return NextResponse.json({ error: 'Query required' }, { status: 400 });
     }
 
-    // 1. Generate embedding for query
-    const embedResult = await embedModel.embedContent(searchQuery);
-    const queryVector = embedResult.embedding.values;
+    let queryVec: number[] | null = null;
+    try {
+      queryVec = await embedText(query);
+    } catch (e) {
+      console.warn("Embedding failed, falling back to direct AI generation.", e);
+    }
 
-    // 2. Unified Retrieval from Firestore
+    // Fetch in parallel targeting Cloud caches
+    const [pvSnap, gsSnap] = await Promise.all([
+      adminDb.collection('private_vault').where('owner_uid', '==', uid).get(),
+      adminDb.collection('global_syllabus').get()
+    ]);
+
     const results: any[] = [];
-    const collections = ["private_vault", "global_syllabus"];
-
-    for (const colName of collections) {
-      const snapshot = await adminDb.collection(colName).get();
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.embedding && Array.isArray(data.embedding)) {
-          const score = cosineSimilarity(queryVector, data.embedding);
+    if (queryVec) {
+      for (const snap of [pvSnap, gsSnap]) {
+        const source = snap === pvSnap ? 'private_vault' : 'global_syllabus';
+        for (const doc of snap.docs) {
+          const d = doc.data();
+          if (!d.embedding || !Array.isArray(d.embedding)) continue;
+          const score = cosineSim(queryVec, d.embedding);
           results.push({
             id: doc.id,
-            ...data,
+            ...d,
             score,
-            source_vault: colName
+            source_vault: source
           });
         }
-      });
+      }
+
+      results.sort((a, b) => b.score - a.score);
+      const best = results[0]?.score ?? 0;
+
+      if (best >= 0.75) {
+        return NextResponse.json({
+          status: 'vault_hit',
+          source: 'vault',
+          results: results.slice(0, 3)
+        });
+      }
     }
 
-    // 3. Sort and filter
-    results.sort((a, b) => b.score - a.score);
-    const bestScore = results.length > 0 ? results[0].score : 0;
-    
-    // Path B: Sentinel Fallback / Marksman Loop
-    if (bestScore < 0.7 || deep_research) {
-      console.log(`[SEARCH] Triggering Path B: AI Research Gateway (Score: ${bestScore.toFixed(2)})`);
-      
-      const prompt = `
-        Role: Senior Academic Examiner (Marksman Mode).
-        Objective: Provide a comprehensive 14-mark university exam response for '${searchQuery}'.
-        Tailor for: Indian BTech Student (AIML Semester 2).
-        Return JSON with: 'title', 'summary', 'key_points' (array), 'diagram_desc', 'priority_level'.
-      `;
+    // Fallback to Gemini Logic Generator
+    const prompt = `
+    Role: Senior Academic Examiner for Indian BTech University.
+    Topic: ${query}
+    Task: Generate a complete 14-mark answer.
+    Structure:
+    [DEFINITION & CONTEXT] (2 Marks)
+    [TECHNICAL BREAKDOWN] (6 Marks) — use bullet points
+    [DIAGRAM DESCRIPTION] (3 Marks) — precise labeled diagram
+    [PRACTICAL APPLICATION] (3 Marks) — Indian BTech context
+    Return ONLY valid JSON:
+    { "title": string, "summary": string, "key_points": string[],
+      "diagram_desc": string, "application": string,
+      "priority_level": "14-Mark Essay",
+      "footer": "Verified by StudyKrack Marksman Engine" }`;
 
-      const aiResult = await model.generateContent(prompt);
-      const aiOutput = aiResult.response.text().replace(/```json|```/g, "").trim();
-      const researchedConcept = JSON.parse(aiOutput);
-      
-      const header = `${researchedConcept.title} ${researchedConcept.summary}`;
-      const embedding = await getEmbedding(header);
-
-      const docData = {
-        ...researchedConcept,
-        subject_code: "AI_RESEARCH",
-        timestamp: Date.now() / 1000,
-        embedding: embedding,
-        is_ai: true,
-        verified: true,
-        status: "Archived",
-        footer: "Verified by StudyKrack Marksman Loop"
+    const raw = await generateWithBreaker(prompt);
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    let parsed: any;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch {
+      parsed = {
+        title: query,
+        summary: raw,
+        key_points: [],
+        diagram_desc: '',
+        application: '',
+        priority_level: '14-Mark Essay',
+        footer: 'Verified by StudyKrack Marksman Engine'
       };
-
-      await adminDb.collection("global_syllabus").add(docData);
-      
-      return NextResponse.json({ 
-        results: [{ ...docData, score: 1.0, source_vault: "global_syllabus" }],
-        agentic_source: "Marksman Loop"
-      });
     }
 
-    return NextResponse.json({ results: results.slice(0, 3) });
+    // Massive Latency Optimization: Pre-allocate ID and respond instantly.
+    const docRef = adminDb.collection('global_syllabus').doc();
+    
+    // Background execution: Generating embeddings is slow, so we don't await this!
+    Promise.resolve().then(async () => {
+      try {
+        const embedding = await embedText(`${parsed.title} ${parsed.summary}`);
+        await docRef.set({
+          ...parsed,
+          embedding,
+          subject_code: 'AI_RESEARCH',
+          is_ai: true,
+          verified: false,
+          timestamp: Date.now(),
+          agentic_source: 'Marksman Loop'
+        });
+      } catch (err) {
+        console.error('Background embed failed', err);
+      }
+    });
+
+    // Return to the student UI immediately without waiting for embedding/saving delays!
+
+    return NextResponse.json({
+      status: 'gemini_hit',
+      source: 'gemini',
+      results: [{ ...parsed, id: docRef.id }]
+    });
+
   } catch (error: any) {
-    console.error("[SEARCH] Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Search failed:', error);
+    return NextResponse.json({ error: error.message || 'Search failed' }, { status: 500 });
   }
 }

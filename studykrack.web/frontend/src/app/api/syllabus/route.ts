@@ -1,38 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebaseAdmin';
 
 export async function GET(req: NextRequest) {
   try {
+    const uid = req.cookies.get('session')?.value;
+    if (!uid) return NextResponse.json(
+      { error: 'Unauthorized' }, { status: 401 }
+    );
+
+    const pvSnap = await adminDb
+      .collection('private_vault')
+      .where('owner_uid', '==', uid)
+      .get();
+
+    if (pvSnap.empty) return NextResponse.json([]);
+
     const stats: Record<string, { total: number; mastered: number }> = {};
-    const collections = ["private_vault", "global_syllabus"];
 
-    for (const col of collections) {
-      const snapshot = await adminDb.collection(col).get();
-      snapshot.forEach(doc => {
-        const d = doc.data();
-        const code = d.subject_code || "GENERAL";
-        const status = d.status || "Archived";
+    pvSnap.docs.forEach(doc => {
+      const d = doc.data();
+      const code = d.subject_code || 'GENERAL';
+      if (!stats[code]) stats[code] = { total: 0, mastered: 0 };
+      stats[code].total++;
+      if (d.status === 'Mastered') stats[code].mastered++;
+    });
 
-        if (!stats[code]) {
-          stats[code] = { total: 0, mastered: 0 };
-        }
-
-        stats[code].total += 1;
-        // Fix for Bug 3: status check inside the loop
-        if (status === "Mastered") {
-          stats[code].mastered += 1;
-        }
-      });
-    }
-
-    const results = Object.entries(stats).map(([k, v]) => ({
-      subject: k,
-      percentage: v.total > 0 ? (v.mastered / v.total) * 100 : 0
-    }));
-
-    return NextResponse.json(results);
+    return NextResponse.json(
+      Object.entries(stats).map(([subject, v]) => ({
+        subject,
+        percentage: v.total > 0
+          ? Math.round((v.mastered / v.total) * 100)
+          : 0,
+        total: v.total,
+        mastered: v.mastered
+      }))
+    );
   } catch (error: any) {
-    console.error("[SYLLABUS] Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Syllabus fetch failed' },
+      { status: 500 }
+    );
   }
 }

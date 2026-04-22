@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore, initializeFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
-import { getAuth } from "firebase/auth";
+import { getFirestore, initializeFirestore, Firestore } from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
+import { getAuth, Auth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,10 +13,14 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// Prevent crashes during build-time prerendering if env vars are missing
+const app = !getApps().length
+  ? (firebaseConfig.apiKey ? initializeApp(firebaseConfig) : null)
+  : getApp();
 
 // USE THIS EXACT LINE. Map the specific AI-Studio provisioned Database ID.
 const databaseId = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID || "(default)";
-export const db = getFirestore(app, databaseId);
-export const storage = getStorage(app);
-export const auth = getAuth(app);
+
+export const db = app ? getFirestore(app, databaseId) : null as unknown as Firestore;
+export const storage = app ? getStorage(app) : null as unknown as FirebaseStorage;
+export const auth = app ? getAuth(app) : null as unknown as Auth;

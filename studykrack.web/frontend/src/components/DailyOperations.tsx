@@ -37,7 +37,7 @@ export default function DailyOperations() {
     <div className="mb-12 animate-in fade-in slide-in-from-top-4 duration-700">
       <div className="flex items-center gap-3 mb-6">
         <Calendar className="text-secondary w-5 h-5" />
-        <h3 className="text-sm font-headline font-bold text-white uppercase tracking-widest italic">Today's Academic Matrix</h3>
+        <h3 className="text-sm font-headline font-bold text-white uppercase tracking-widest italic">Today's Class Schedule</h3>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

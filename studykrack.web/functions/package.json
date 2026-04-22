@@ -2,11 +2,11 @@
   "name": "studykrack-functions",
   "description": "StudyKrack Zero-Trust Functions",
   "dependencies": {
-    "firebase-admin": "^11.8.0",
-    "firebase-functions": "^4.3.1"
+    "firebase-admin": "^13.8.0",
+    "firebase-functions": "^7.2.5"
   },
   "engines": {
-    "node": "18"
+    "node": "22"
   },
   "main": "index.js",
   "private": true

@@ -32,7 +32,7 @@ export default function LandingPage() {
           <span className="font-headline font-black text-xs uppercase tracking-widest text-white italic">StudyKrack v2.0</span>
         </div>
         <Link href="/auth" className="px-5 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-white/10 transition-all">
-          Identity Login
+          Sign In
         </Link>
       </nav>
 
@@ -50,11 +50,8 @@ export default function LandingPage() {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth" className="px-10 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-cyan-600 text-black font-black uppercase tracking-widest text-xs shadow-[0_20px_40px_rgba(6,182,212,0.3)] hover:scale-105 active:scale-95 transition-all">
-              Initiate Sentinel Access
+              Get Started
             </Link>
-            <button className="px-10 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold uppercase tracking-widest text-xs hover:bg-white/10 transition-all">
-              Watch Deployment
-            </button>
           </div>
         </div>
       </section>
@@ -62,7 +59,7 @@ export default function LandingPage() {
       {/* Comparison: Marksman Engine */}
       <section className="py-24 px-6 max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <span className="text-cyan-500 font-label font-bold uppercase tracking-[0.4em] text-[10px]">The Marksman Advantage</span>
+          <span className="text-cyan-500 font-label font-bold uppercase tracking-[0.4em] text-[10px]">The AI Tutor Advantage</span>
           <h2 className="text-3xl font-headline font-bold text-white mt-2 italic">Standard AI vs StudyKrack Engine</h2>
         </div>
 
@@ -90,7 +87,7 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-3 mb-6">
               <SentinelLogo className="w-6 h-6" />
-              <span className="text-xs font-bold uppercase tracking-widest text-cyan-500">Marksman Engine v2.0</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-cyan-500">Exam Prep Mode v2.0</span>
             </div>
             <div className="space-y-6">
               <div className="p-4 bg-cyan-950/20 rounded-xl border border-cyan-500/20">
@@ -103,7 +100,7 @@ export default function LandingPage() {
                 </ul>
               </div>
               <div className="h-10 w-full bg-cyan-500/10 rounded-xl border border-dashed border-cyan-500/20 flex items-center justify-center">
-                 <span className="text-[9px] font-label font-bold text-cyan-500/60 uppercase tracking-widest italic">Target: 8.5+ SGPA Calibration Active</span>
+                 <span className="text-[9px] font-label font-bold text-cyan-500/60 uppercase tracking-widest italic">Target: 8.5+ SGPA Setting Active</span>
               </div>
             </div>
           </div>
@@ -126,8 +123,8 @@ export default function LandingPage() {
                 <span className="material-symbols-outlined text-amber-500">security</span>
               </div>
               <div>
-                <p className="text-white font-bold leading-none">Logic Vault Protection</p>
-                <p className="text-xs text-zinc-500 mt-1 uppercase tracking-widest">Enterprise Guard v2.0</p>
+                <p className="text-white font-bold leading-none">Study Vault Protection</p>
+                <p className="text-xs text-zinc-500 mt-1 uppercase tracking-widest">Enterprise Privacy v2.0</p>
               </div>
             </div>
           </div>
@@ -136,9 +133,15 @@ export default function LandingPage() {
              <div className="relative bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[40px] p-10 aspect-square flex flex-col items-center justify-center">
                 <div className="w-full h-1 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent mb-8"></div>
                 <div className="grid grid-cols-3 gap-4 w-full">
-                   {[...Array(9)].map((_, i) => (
-                     <div key={i} className="aspect-square rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-                        <span className="text-[8px] text-zinc-700 font-mono tracking-tighter">HASH_{i*235}</span>
+                   {[
+                     "f1e2...8b9c", "a4d5...c6f7", "e8b9...d1a2",
+                     "c3f4...e5b6", "b7a8...c9d0", "d2e3...f4a5",
+                     "a1b2...c3d4", "e5f6...a7b8", "9c0d...1e2f"
+                   ].map((hash, i) => (
+                     <div key={i} className="aspect-square rounded-xl bg-[#080808] border border-white/10 flex flex-col items-center justify-center p-2 text-center group-hover:border-cyan-500/50 transition-colors">
+                        <span className="text-[10px] mb-1">🔒</span>
+                        <span className="text-[7px] text-zinc-500 font-bold uppercase tracking-tighter mb-1 leading-none">SHA-256 Protected</span>
+                        <span className="text-[8px] text-cyan-500/60 font-mono tracking-tighter">{hash}</span>
                      </div>
                    ))}
                 </div>
@@ -161,7 +164,7 @@ export default function LandingPage() {
 
           <div className="text-center mb-10">
             <span className="text-6xl font-headline font-black text-white">₹19</span>
-            <span className="text-zinc-500 uppercase font-bold text-xs tracking-widest ml-2">/ 20 Power Ingestions</span>
+            <span className="text-zinc-500 uppercase font-bold text-xs tracking-widest ml-2">/ 20 AI Credits</span>
           </div>
 
           <div className="bg-white/5 rounded-2xl p-6 border border-white/5 mb-10 text-left">

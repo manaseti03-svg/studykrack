@@ -49,7 +49,8 @@ export default function SyllabusTracker() {
 
   const handleExport = async (subjectCode: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/export_pdf/${subjectCode}`);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const response = await fetch(`${apiUrl}/export_pdf/${subjectCode}`);
       if (!response.ok) throw new Error("Export failed");
       
       const blob = await response.blob();
@@ -61,9 +62,31 @@ export default function SyllabusTracker() {
       a.click();
       a.remove();
     } catch (err) {
-      alert("No high-priority nodes found for this subject yet!");
+      alert("No specialized study materials for this subject yet!");
     }
   };
+
+  useEffect(() => {
+    const fetchRealProgress = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const res = await fetch(`${apiUrl}/api/syllabus`);
+        if (res.ok) {
+          const stats = await res.json();
+          // Map backend stats to the UI structure
+          const subjects = stats.map((s: any, idx: number) => ({
+            id: idx + 1,
+            name: s.subject,
+            percentage: s.percentage,
+            is_uploaded: s.percentage > 0
+          }));
+          setData(subjects);
+        }
+      } catch (err) {}
+    };
+
+    if (auth.currentUser) fetchRealProgress();
+  }, [profile]);
 
   const processedCount = data.filter(u => u.is_uploaded).length;
   const totalCount = data.length || 5;
@@ -106,8 +129,8 @@ export default function SyllabusTracker() {
           {/* 5 Units tracker rows */}
           <div className="w-full space-y-6 pt-6 border-t border-white/5">
              <h4 className="font-label text-[9px] text-zinc-500 font-bold uppercase tracking-[0.3em] text-left mb-4 flex justify-between">
-                <span>My Syllabus Progress</span>
-                <span className="text-secondary">{processedCount}/{totalCount} Done</span>
+                <span>My Study Progress</span>
+                <span className="text-secondary">{processedCount}/{totalCount} Subjects</span>
              </h4>
              <div className="space-y-3">
               {data.map((unit) => (

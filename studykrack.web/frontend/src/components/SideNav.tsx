@@ -7,10 +7,10 @@ export default function SideNav() {
 
   const links = [
     { href: "/dashboard", label: "Home", icon: "home" },
-    { href: "/vault", label: "Vault", icon: "inventory_2" },
+    { href: "/vault", label: "Notes", icon: "inventory_2" },
     { href: "/planner", label: "Planner", icon: "calendar_month" },
     { href: "/community", label: "Community", icon: "groups" },
-    { href: "/settings", label: "Identity", icon: "account_circle" },
+    { href: "/settings", label: "Profile", icon: "account_circle" },
   ];
 
   return (

@@ -53,6 +53,14 @@ export default function AuthPage() {
         await setDoc(userRef, { last_login: serverTimestamp() }, { merge: true });
       }
 
+      // Secure the backend session so all API routes are authenticated
+      const idToken = await user.getIdToken();
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      });
+
       // Set cookie for middleware
       document.cookie = "isLoggedIn=true; path=/; max-age=" + (7 * 24 * 60 * 60);
       
@@ -71,7 +79,7 @@ export default function AuthPage() {
         setErrorType("permission");
       } else {
         setErrorType("unknown");
-        alert("Verification Failed. Logic Guard Interrupted.");
+        alert("Sign In Failed. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -99,9 +107,9 @@ export default function AuthPage() {
             </div>
             <div className="mt-16 text-center">
                 <p className="text-[10px] font-label font-bold text-cyan-500 uppercase tracking-[0.6em] animate-pulse">
-                   Initializing Sentinel...
+                   Setting up AI Tutor...
                 </p>
-                <p className="text-zinc-600 text-[8px] mt-4 uppercase tracking-[0.3em]">Neural Bridge Active | AIML Sem 2 Roadmap detected</p>
+                <p className="text-zinc-600 text-[8px] mt-4 uppercase tracking-[0.3em]">AI Bridge Active | Academic Roadmap detected</p>
             </div>
         </div>
       </div>
@@ -113,8 +121,8 @@ export default function AuthPage() {
           
           <div className="flex flex-col items-center text-center mb-12">
             <SentinelLogo className="w-16 h-16 mb-6" />
-            <h2 className="text-2xl font-headline font-bold text-white mb-2">Identity Verification</h2>
-            <p className="text-zinc-500 text-sm font-medium">Access your Enterprise Logic Vault</p>
+            <h2 className="text-2xl font-headline font-bold text-white mb-2">Sign In</h2>
+            <p className="text-zinc-500 text-sm font-medium">Your Personal Study Vault</p>
           </div>
 
           <div className="space-y-8">
@@ -135,7 +143,7 @@ export default function AuthPage() {
                   <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
               )}
-              {loading ? 'CALIBRATING...' : 'Continue with Google'}
+              {loading ? 'SETTING UP...' : 'Continue with Google'}
             </button>
 
             <div className="flex items-start gap-3">
@@ -154,8 +162,8 @@ export default function AuthPage() {
 
           <div className="mt-12 pt-8 border-t border-white/5">
              <p className="text-[9px] font-label font-bold text-zinc-600 text-center uppercase tracking-widest leading-loose">
-                Secure Identity Portal <br/>
-                Encrypted by StudyKrack Core
+                Secure Sign In <br/>
+                Protected by StudyKrack Core
              </p>
           </div>
         </div>

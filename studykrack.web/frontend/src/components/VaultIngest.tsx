@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react';
 import { db, auth } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { Upload, FileText, FlaskConical, BookOpen, Check, Loader2 } from 'lucide-react';
+import { Upload, FileText, FlaskConical, BookOpen, Check, Loader2, Gauge } from 'lucide-react';
+import { uploadWithProgress } from '@/lib/storageService';
 
 const CATEGORIES = [
   { id: "Class Notes", icon: BookOpen },
@@ -18,6 +19,7 @@ export default function VaultIngest() {
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Class Notes");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -41,15 +43,24 @@ export default function VaultIngest() {
     formData.append("file", e.target.files[0]);
     formData.append("subject_name", selectedSubject);
     formData.append("category", selectedCategory);
+    formData.append("user_id", auth.currentUser?.uid || ""); // Governor Security Injection
 
     try {
-      const res = await fetch("http://localhost:8000/forge/upload", {
+      // 1. Salvaged Progress Logic: Upload to Firebase Storage first
+      await uploadWithProgress(e.target.files[0], "study_vault", (progress) => {
+        setUploadProgress(progress);
+      });
+
+      // 2. Direct API Call for Processing
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${apiUrl}/forge/upload`, {
         method: "POST",
         body: formData,
       });
 
       if (!res.ok) throw new Error("Upload failed");
       setStatus("success");
+      setUploadProgress(0);
       setTimeout(() => setStatus("idle"), 3000);
     } catch (err) {
       console.error(err);
@@ -72,7 +83,7 @@ export default function VaultIngest() {
              <h3 className="text-xl font-headline font-bold text-white uppercase italic tracking-tight">Vault Ingestion</h3>
           </div>
           <p className="text-xs text-zinc-500 leading-relaxed font-medium">
-            Categorize and index your academic material. StudyKrack will automatically tag and secure them in your Logic Vault.
+            Categorize and index your academic material. Our AI Tutor will automatically tag and secure them in your Study Vault.
           </p>
         </div>
 
@@ -117,7 +128,18 @@ export default function VaultIngest() {
               <input type="file" className="hidden" accept=".pdf" onChange={handleUpload} disabled={loading} />
               <div className="flex flex-col items-center gap-4">
                 {loading ? (
-                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                  <div className="flex flex-col items-center gap-4 w-full px-12">
+                     <div className="flex items-center gap-3">
+                        <Gauge className="w-5 h-5 text-primary animate-pulse" />
+                        <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">{uploadProgress}% Ingested</span>
+                     </div>
+                     <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary transition-all duration-300 shadow-[0_0_15px_rgba(74,225,131,0.5)]" 
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                     </div>
+                  </div>
                 ) : status === 'success' ? (
                   <div className="flex flex-col items-center gap-2 text-tertiary">
                      <Check className="w-10 h-10" />

@@ -121,13 +121,27 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
               </p>
             </div>
             
-            <label className="relative group cursor-pointer">
+            <label className="relative group cursor-pointer flex flex-col items-center">
               <input type="file" onChange={handleFileUpload} className="hidden" accept="image/*" disabled={loading} />
               <div className="px-12 py-5 rounded-2xl bg-cyan-500 text-black font-black uppercase tracking-widest text-[10px] shadow-[0_20px_40px_rgba(6,182,212,0.3)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="material-symbols-outlined text-[18px]">add_photo_alternate</span>}
                 {loading ? "INITIALIZING VISION..." : "UPLOAD TIMETABLE"}
               </div>
             </label>
+            <button
+               onClick={async () => {
+                 setLoading(true);
+                 if (auth.currentUser) {
+                    await setDoc(doc(db, "users", auth.currentUser.uid), { setup_skipped: true }, { merge: true });
+                 }
+                 setLoading(false);
+                 onComplete();
+               }}
+               disabled={loading}
+               className="mt-4 px-10 py-3 rounded-2xl bg-white/5 text-zinc-400 font-bold uppercase tracking-widest text-[9px] hover:bg-white/10 hover:text-white transition-all border border-white/10"
+            >
+               Skip for now
+            </button>
             
             <p className="text-[9px] font-label font-bold text-zinc-600 uppercase tracking-widest">
                 ZERO-TRUST SECURE INGESTION | BY MUNI MANAS

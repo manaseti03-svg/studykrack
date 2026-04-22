@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   description: "Elite AI Study Platform",
 };
 
+import ErrorBoundary from "@/components/ErrorBoundary";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -21,17 +23,21 @@ export default function RootLayout({
       </head>
       <body className="antialiased bg-[#050505] min-h-screen text-white font-body">
 
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
 
         <script
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                  }, function(err) {
-                    console.log('ServiceWorker registration failed: ', err);
+                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                      registration.unregister().then(function(boolean) {
+                        console.log('Old ServiceWorker purged to break cache loop');
+                      });
+                    }
                   });
                 });
               }

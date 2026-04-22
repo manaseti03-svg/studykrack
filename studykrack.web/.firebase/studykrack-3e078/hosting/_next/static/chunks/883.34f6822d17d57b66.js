@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[883],{883:(t,e,a)=>{a.d(e,{vaultPrioritySearch:()=>n});let r=()=>"/api/v2";async function n(t){try{let e=await fetch("".concat(r(),"/search"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:t})});if(!e.ok)return[];return(await e.json()).results||[]}catch(t){return[]}}}}]);

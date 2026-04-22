@@ -11,3 +11,4 @@ numpy
 pydantic
 fpdf2
 Pillow
+firebase-functions

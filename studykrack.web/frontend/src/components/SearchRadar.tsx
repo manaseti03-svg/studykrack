@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import VideoModal from "./VideoModal";
+import { auth } from "@/lib/firebase";
 
 interface SearchRadarProps {
   onSelectNode?: (node: any) => void;
@@ -22,8 +23,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const res = await fetch(`${apiUrl}/health`);
+        const res = await fetch("/api/health");
         setIsBackendOnline(res.ok);
       } catch (e) {
         setIsBackendOnline(false);
@@ -32,11 +32,11 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
     
     const checkUserPlan = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const res = await fetch(`${apiUrl}/api/user/status`);
+        // Fallback for user plan check
+        const res = await fetch("/api/metrics");
         if (res.ok) {
           const data = await res.json();
-          setUserPlan(data.subscription_status);
+          setUserPlan(data.subscription_status || "free");
         }
       } catch (e) {}
     }
@@ -61,12 +61,10 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
         const vaultHits = await vaultPrioritySearch(query);
         
         if (vaultHits.length > 0) {
-          console.log("[RADAR] Vault Hit! Serving from Permanent Memory.");
           setResults(vaultHits);
           setStatus("success");
           return;
         } else {
-          console.log("[RADAR] Vault Miss. Path B Fallback Initiated.");
           setIsPathBActive(true);
         }
       }
@@ -74,13 +72,22 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
       if (isDeepResearch) setIsPathBActive(true);
 
       // 2. Priority 2: Backend Search / AI Generation
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await fetch(`${apiUrl}/search`, {
+      const response = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, deep_research: isDeepResearch }),
+        body: JSON.stringify({ 
+          query, 
+          user_id: auth.currentUser?.uid, // Identity Injection for Governor Protocol
+          deep_research: isDeepResearch 
+        }),
       });
       
+      if (response.status === 429) {
+        setShowUpgradeModal(true);
+        setStatus("idle");
+        return;
+      }
+
       if (!response.ok) {
         if (response.status === 402 || response.status === 403) {
            setShowUpgradeModal(true);
@@ -115,11 +122,13 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
   const updateMastery = async (nodeId: string, currentStatus: string) => {
     const newStatus = currentStatus === "Mastered" ? "Archived" : "Mastered";
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/node/status/${nodeId}`, {
+      const res = await fetch(`/api/node/status/${nodeId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ 
+          status: newStatus,
+          user_id: auth.currentUser?.uid
+        }),
       });
       if (res.ok) {
         setResults(prev => prev.map(r => r.id === nodeId ? { ...r, status: newStatus } : r));
@@ -161,8 +170,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
                         Go Back
                     </button>
                     <button onClick={async () => {
-                        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-                        await fetch(`${apiUrl}/api/user/upgrade`, { method: "POST" });
+                        await fetch(`/api/metrics`, { method: "POST" });
                         setUserPlan("fuel");
                         setShowUpgradeModal(false);
                         // Optional: auto-retry search could be done here, but let's let user initiate again
@@ -189,7 +197,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
           <div className="flex items-center justify-center gap-3 mb-2">
             <div className={`w-2 h-2 rounded-full ${isBackendOnline ? 'bg-tertiary success-indicator' : 'bg-red-500 animate-pulse'}`}></div>
             <span className="font-label text-secondary font-bold tracking-[0.2em] uppercase text-[10px]">
-              {(status === "searching" && isPathBActive) ? 'Global Sentinel Active' : (isBackendOnline ? 'AI Tutor Active' : 'AI Tutor Offline')}
+              {(status === "searching" && isPathBActive) ? 'AI Tutor Deep Search' : (isBackendOnline ? 'AI Tutor Active' : 'AI Tutor Offline')}
             </span>
           </div>
           <h2 className="text-4xl font-headline font-bold tracking-tight leading-tight text-white">
@@ -266,7 +274,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
                  <span className="material-symbols-outlined text-on-primary text-2xl animate-spin">cyclone</span>
               </div>
               <p className="font-label text-xs font-bold text-primary uppercase tracking-[0.4em] animate-pulse">
-                {isPathBActive ? 'Searching Global Sentinel...' : 'I am thinking...'}
+                {isPathBActive ? 'Using AI Tutor Deep Search...' : 'I am thinking...'}
               </p>
            </div>
         )}
@@ -377,7 +385,7 @@ export default function SearchRadar({ onSelectNode }: SearchRadarProps) {
                     )}
                   </div>
                   <p className="text-[9px] font-label text-zinc-500 font-bold uppercase tracking-widest px-4">
-                    Checked by StudyKrack 2.0
+                    Verified by AI Tutor
                   </p>
                 </div>
 

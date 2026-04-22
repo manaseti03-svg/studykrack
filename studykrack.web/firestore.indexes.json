@@ -1,0 +1,33 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "private_vault",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "owner_uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "doc_hash",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "global_syllabus",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "subject_code",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

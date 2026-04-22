@@ -17,17 +17,15 @@ export default function Library() {
       }
 
       let q = query(
-        collection(db, "knowledge_vault"), 
-        where("owner_id", "==", user.uid),
-        orderBy("timestamp", "desc")
+        collection(db, "private_vault"), 
+        where("owner_uid", "==", user.uid)
       );
 
       if (activeSubject) {
         q = query(
-          collection(db, "knowledge_vault"), 
-          where("owner_id", "==", user.uid),
-          where("subject_code", "==", activeSubject), 
-          orderBy("timestamp", "desc")
+          collection(db, "private_vault"), 
+          where("owner_uid", "==", user.uid),
+          where("subject_code", "==", activeSubject)
         );
       }
       
@@ -36,6 +34,14 @@ export default function Library() {
           id: doc.id,
           ...doc.data()
         }));
+        
+        // Process client-side sort to completely bypass the missing composite index error
+        data.sort((a: any, b: any) => {
+          const timeA = a.imported_at || a.timestamp?.seconds * 1000 || a.timestamp || 0;
+          const timeB = b.imported_at || b.timestamp?.seconds * 1000 || b.timestamp || 0;
+          return timeB - timeA;
+        });
+
         setNodes(data);
         setLoading(false);
       }, (error) => {
@@ -133,7 +139,9 @@ export default function Library() {
                     <div>
                       <h4 className="font-headline font-bold text-white">{node.title}</h4>
                       <div className="flex items-center gap-3 mt-1">
-                        <span className="text-[8px] font-label text-zinc-500 font-bold uppercase tracking-widest">Saved on {new Date(node.timestamp?.seconds * 1000).toLocaleDateString()}</span>
+                        <span className="text-[8px] font-label text-zinc-500 font-bold uppercase tracking-widest">
+                          Saved on {new Date(node.imported_at || node.timestamp?.seconds * 1000 || node.timestamp || Date.now()).toLocaleDateString()}
+                        </span>
                         <div className="w-1 h-1 rounded-full bg-zinc-700"></div>
                         <span className="text-[8px] font-label text-primary font-bold uppercase tracking-widest">{node.tag || "Important Note"}</span>
                       </div>

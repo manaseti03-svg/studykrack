@@ -1,118 +1,177 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import pdf from 'pdf-parse';
 import crypto from 'crypto';
+const pdfParse = require('pdf-parse');
+import { adminDb, adminStorage } from '@/lib/firebaseAdmin';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-const embedModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
+/**
+ * Shared Helpers
+ */
 
-function cleanText(text: string): string {
-  return text.replace(/\s+/g, ' ').trim();
+async function embedText(text: string): Promise<number[]> {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${process.env.GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'models/text-embedding-004',
+        content: { parts: [{ text }] },
+      }),
+    }
+  );
+  const data = await res.json();
+  if (!data.embedding) throw new Error('Embedding failed');
+  return data.embedding.values;
 }
 
-async function getEmbedding(text: string) {
-  const result = await embedModel.embedContent(text);
-  return result.embedding.values;
+function cosineSim(a: number[], b: number[]): number {
+  const dot = a.reduce((s, v, i) => s + v * b[i], 0);
+  const nA = Math.sqrt(a.reduce((s, v) => s + v * v, 0));
+  const nB = Math.sqrt(b.reduce((s, v) => s + v * v, 0));
+  return dot / (nA * nB + 1e-10);
 }
+
+async function generateWithBreaker(prompt: string): Promise<string> {
+  for (let i = 0; i < 3; i++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+          signal: controller.signal,
+        }
+      );
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      return data.candidates[0].content.parts[0].text;
+    } catch (e) {
+      if (i === 2) throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw new Error('Circuit breaker tripped');
+}
+
+/**
+ * FILE 3 — frontend/app/api/forge/route.ts
+ */
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData();
-    const file = formData.get('file') as File;
-    const subjectName = formData.get('subject_name') as string || 'General Study';
+    const uid = req.cookies.get('session')?.value;
+    if (!uid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    const { storagePath, subjectName, subjectCode } = await req.json();
+    if (!storagePath) {
+      return NextResponse.json({ error: 'storagePath required' }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const fileHash = crypto.createHash('sha256').update(buffer).digest('hex');
+    // Download from Storage
+    const bucket = adminStorage.bucket();
+    const file = bucket.file(storagePath);
+    let buffer: Buffer;
+    try {
+      const [downloadedBuffer] = await file.download();
+      buffer = downloadedBuffer;
+    } catch (e) {
+      return NextResponse.json({ error: 'Storage download fail' }, { status: 500 });
+    }
 
-    // 1. Deduplication check
-    const existing = await adminDb.collection("private_vault")
-      .where("doc_hash", "==", fileHash)
-      .limit(1)
-      .get();
+    // SHA-256 hash
+    const hash = crypto.createHash('sha256').update(buffer).digest('hex');
 
-    if (!existing.empty) {
+    // Dedupe check
+    const [pvSnap, gsSnap] = await Promise.all([
+      adminDb.collection('private_vault')
+        .where('doc_hash', '==', hash)
+        .where('owner_uid', '==', uid)
+        .limit(1).get(),
+      adminDb.collection('global_syllabus')
+        .where('doc_hash', '==', hash)
+        .limit(1).get()
+    ]);
+
+    if (!pvSnap.empty) {
       return NextResponse.json({
-        status: "success",
-        message: "Note already exists (Deduplicated)",
-        deduplicated: true
+        status: 'deduplicated',
+        message: 'Already in your vault. Linked via deduplication.',
+        doc_id: pvSnap.docs[0].id
       });
     }
 
-    // 2. Extract Text
-    const pdfData = await pdf(buffer);
-    const fullText = pdfData.text;
+    if (!gsSnap.empty) {
+      return NextResponse.json({
+        status: 'deduplicated',
+        message: 'This document exists in the global syllabus vault.',
+        doc_id: gsSnap.docs[0].id
+      });
+    }
 
-    // 3. Chunking & Concept Extraction
-    // Simulating the "Chapters" logic from main.py
-    const paragraphs = fullText.split('\n\n');
+    // Extract PDF text
+    let fullText: string;
+    try {
+      const pdfData = await pdfParse(buffer);
+      fullText = pdfData.text;
+    } catch (e) {
+      return NextResponse.json({ error: 'PDF parse fail' }, { status: 500 });
+    }
+
+    // Chunk text
     const chunks: string[] = [];
-    let currentChunk = "";
-    
-    for (const p of paragraphs) {
-      if ((currentChunk + p).length < 8000) {
-        currentChunk += " " + p;
-      } else {
-        chunks.push(currentChunk);
-        currentChunk = p;
-      }
+    const size = 3000, overlap = 200;
+    for (let i = 0; i < fullText.length; i += size - overlap) {
+      chunks.push(fullText.slice(i, i + size));
     }
-    if (currentChunk) chunks.push(currentChunk);
 
-    const allConcepts: any[] = [];
-
-    for (const [idx, chunkText] of chunks.entries()) {
-      const cleaned = cleanText(chunkText);
+    let totalCount = 0;
+    for (const chunk of chunks) {
       const prompt = `
-        Role: Senior Academic Examiner (Marksman Mode).
-        Task: Extract high-density 14-Mark academic concepts from Segment ${idx + 1}.
-        Return JSON: array of {'title', 'definition', 'breakdown', 'diagram_desc', 'application'}.
-        Text: ${cleaned.slice(0, 8000)}
-      `;
+      Role: Senior Academic Examiner.
+      Task: Extract 14-mark academic concepts from this text.
+      Return ONLY a valid JSON array:
+      [{ "title": string, "summary": string, "key_points": string[],
+         "diagram_desc": string, "application": string,
+         "priority_level": string }]
+      Text: ${chunk}`;
 
-      const result = await model.generateContent(prompt);
-      const aiOutput = result.response.text().replace(/```json|```/g, "").trim();
       try {
-        const concepts = JSON.parse(aiOutput);
-        allConcepts.push(...concepts);
+        const raw = await generateWithBreaker(prompt);
+        const cleaned = raw.replace(/```json|```/g, '').trim();
+        const concepts = JSON.parse(cleaned);
+
+        for (const concept of concepts) {
+          const embedding = await embedText(`${concept.title} ${concept.summary}`);
+          await adminDb.collection('private_vault').add({
+            ...concept,
+            owner_uid: uid,
+            doc_hash: hash,
+            subject_name: subjectName,
+            subject_code: subjectCode,
+            source_file: storagePath,
+            embedding,
+            status: 'Archived',
+            verified: true,
+            is_ai: true,
+            timestamp: Date.now(),
+            footer: 'Verified by StudyKrack Forge'
+          });
+          totalCount++;
+        }
       } catch (e) {
-        console.warn("Failed to parse AI output for chunk", idx);
+        console.error('Chunk failed, skipping:', e);
+        continue;
       }
     }
 
-    // 4. Batched Write to Firestore
-    const batch = adminDb.batch();
-    for (const concept of allConcepts) {
-      const header = `${concept.title} ${concept.definition}`;
-      const embedding = await getEmbedding(header);
-      
-      const docRef = adminDb.collection("private_vault").doc();
-      batch.set(docRef, {
-        ...concept,
-        summary: concept.definition,
-        key_points: concept.breakdown.split('.').filter((s: string) => s.trim().length > 5),
-        subject_name: subjectName,
-        subject_code: subjectName,
-        timestamp: Date.now() / 1000,
-        verified: true,
-        doc_hash: fileHash,
-        embedding: embedding,
-        is_ai: true,
-        status: "Archived",
-        footer: "Verified by StudyKrack Next.js Engine"
-      });
-    }
+    return NextResponse.json({ status: 'success', count: totalCount });
 
-    await batch.commit();
-
-    return NextResponse.json({ status: "success", count: allConcepts.length });
   } catch (error: any) {
-    console.error("[FORGE] Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Forge failed:', error);
+    return NextResponse.json({ error: error.message || 'Forge failed' }, { status: 500 });
   }
 }
